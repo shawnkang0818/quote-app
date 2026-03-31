@@ -11,6 +11,7 @@ function App() {
   const [adminPassword, setAdminPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [editingPartId, setEditingPartId] = useState(null);
+  const [quoteItems, setQuoteItems] = useState([]);
 
   const fetchParts = () => {
     fetch("http://localhost:5001/api/parts")
@@ -18,6 +19,27 @@ function App() {
       .then((data) => setParts(data))
       .catch((err) => console.error(err));
   };
+
+  const addToQuote = (part) => {
+    setQuoteItems((prevItems) => {
+      const existing = prevItems.find((item) => item._id === part._id);
+
+      if (existing) {
+        return prevItems.map((item) =>
+          item._id === part._id
+            ? { ...item, quoteQuantity: item.quoteQuantity + 1 }
+            : item
+        );
+      }
+
+      return [...prevItems, { ...part, quoteQuantity: 1 }];
+    });
+  };
+
+const total = quoteItems.reduce(
+  (sum, item) => sum + item.price * item.quoteQuantity,
+  0
+);
 
   useEffect(() => {
     fetchParts();
@@ -273,6 +295,7 @@ function App() {
                 <th className="border px-4 py-2 text-left">Name</th>
                 <th className="border px-4 py-2 text-left">Price</th>
                 <th className="border px-4 py-2 text-left">Quantity</th>
+                <th className="border px-4 py-2 text-left">Add</th>
                 {isAdmin && (
                   <th className="border px-4 py-2 text-left">Actions</th>
                 )}
@@ -285,6 +308,14 @@ function App() {
                   <td className="border px-4 py-2">{part.name}</td>
                   <td className="border px-4 py-2">${part.price}</td>
                   <td className="border px-4 py-2">{part.quantity}</td>
+                  <td className="border px-4 py-2">
+                    <button
+                      onClick={() => addToQuote(part)}
+                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
+                    >
+                      Add
+                    </button>
+                  </td>
 
                   {isAdmin && (
                     <td className="border px-4 py-2">
@@ -310,8 +341,24 @@ function App() {
             </tbody>
           </table>
         </div>
+        <div className="mt-10 bg-white p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">Quote Builder</h2>
+
+          {quoteItems.length === 0 && <p>No items selected</p>}
+
+          {quoteItems.map((item) => (
+            <div key={item._id} className="flex justify-between mb-2">
+              <span>{item.name} x {item.quoteQuantity}</span>
+              <span>${item.price * item.quoteQuantity}</span>
+            </div>
+          ))}
+        </div>
+        <div className="mt-4 font-bold">
+          Total: ${total}
+        </div>
       </div>
     </div>
+    
   );
 }
 
