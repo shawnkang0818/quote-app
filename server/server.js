@@ -3,6 +3,7 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Part from "./models/Part.js";
+import { adminAuth } from "./middleware/adminAuth.js";
 
 dotenv.config();
 
@@ -29,7 +30,7 @@ app.get("/api/parts", async (req, res) => {
   }
 });
 
-app.post("/api/parts", async (req, res) => {
+app.post("/api/parts", adminAuth, async (req, res) => {
   try {
     const newPart = new Part(req.body);
     const saved = await newPart.save();
