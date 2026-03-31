@@ -40,6 +40,29 @@ app.post("/api/parts", adminAuth, async (req, res) => {
   }
 });
 
+app.put("/api/parts/:id", adminAuth, async (req, res) => {
+  try {
+    const updatedPart = await Part.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+
+    res.json(updatedPart);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete("/api/parts/:id", adminAuth, async (req, res) => {
+  try {
+    await Part.findByIdAndDelete(req.params.id);
+    res.json({ message: "Part deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
