@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import jsPDF from "jspdf";
 
 function App() {
   const [parts, setParts] = useState([]);
@@ -40,6 +41,28 @@ const total = quoteItems.reduce(
   (sum, item) => sum + item.price * item.quoteQuantity,
   0
 );
+
+const generatePDF = () => {
+  const doc = new jsPDF();
+
+  doc.setFontSize(18);
+  doc.text("Quotation", 20, 20);
+
+  let y = 40;
+
+  quoteItems.forEach((item) => {
+    doc.text(
+      `${item.name} x ${item.quoteQuantity} - $${item.price * item.quoteQuantity}`,
+      20,
+      y
+    );
+    y += 10;
+  });
+
+  doc.text(`Total: $${total}`, 20, y + 10);
+
+  doc.save("quote.pdf");
+};
 
   useEffect(() => {
     fetchParts();
@@ -352,6 +375,12 @@ const total = quoteItems.reduce(
               <span>${item.price * item.quoteQuantity}</span>
             </div>
           ))}
+          <button
+            onClick={generatePDF}
+            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+          >
+            Generate PDF
+          </button>
         </div>
         <div className="mt-4 font-bold">
           Total: ${total}
