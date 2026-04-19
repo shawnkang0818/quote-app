@@ -13,6 +13,7 @@ function App() {
   const [errorMessage, setErrorMessage] = useState("");
   const [editingPartId, setEditingPartId] = useState(null);
   const [quoteItems, setQuoteItems] = useState([]);
+  const [quotes, setQuotes] = useState([]);
 
   const fetchParts = () => {
     fetch("http://localhost:5001/api/parts")
@@ -90,6 +91,7 @@ function App() {
 
   useEffect(() => {
     fetchParts();
+    fetchQuotes();
   }, []);
 
   useEffect(() => {
@@ -221,6 +223,52 @@ function App() {
     });
     setErrorMessage("");
   };
+
+  //获取历史报价
+  const fetchQuotes = () => {
+    fetch("http://localhost:5001/api/quotes")
+      .then((res) => res.json())
+      .then((data) => setQuotes(data))
+      .catch((err) => console.error(err));
+  };
+
+  //保存当前报价
+  const saveQuote = () => {
+  if (quoteItems.length === 0) {
+    setErrorMessage("No items in quote.");
+    return;
+  }
+
+  fetch("http://localhost:5001/api/quotes", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      items: quoteItems.map((item) => ({
+        partId: item._id,
+        name: item.name,
+        price: item.price,
+        quoteQuantity: item.quoteQuantity,
+      })),
+      total,
+    }),
+  })
+    .then((res) => {
+      if (!res.ok) {
+        throw new Error("Failed to save quote");
+      }
+      return res.json();
+    })
+    .then(() => {
+      setErrorMessage("");
+      fetchQuotes();
+    })
+    .catch((err) => {
+      console.error(err);
+      setErrorMessage("Unable to save quote.");
+    });
+};
 
   return (
     <div className="min-h-screen bg-gray-50 p-10">
@@ -427,12 +475,21 @@ function App() {
             </div>
           ))}
 
-          <button
-            onClick={generatePDF}
-            className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-          >
-            Generate PDF
-          </button>
+          <div className="mt-4 flex gap-4">
+            <button
+              onClick={generatePDF}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+            >
+              Generate PDF
+            </button>
+
+            <button
+              onClick={saveQuote}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+            >
+              Save Quote
+            </button>
+          </div>
         </div>
         <div className="mt-4 font-bold">
           Total: ${total}
@@ -444,6 +501,29 @@ function App() {
           >
             Clear Quote
           </button>
+        </div>
+        <div className="mt-10 bg-white p-6 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-4">Quote History</h2>
+
+          {quotes.length === 0 && <p>No saved quotes yet.</p>}
+
+          {quotes.map((quote) => (
+            <div key={quote._id} className="border rounded-lg p-4 mb-4">
+              <p className="font-semibold">
+                Total: ${quote.total}
+              </p>
+              <p className="text-sm text-gray-500 mb-2">
+                {new Date(quote.createdAt).toLocaleString()}
+              </p>
+
+              {quote.items.map((item, index) => (
+                <div key={index} className="text-sm">
+                  {item.name} x {item.quoteQuantity} - $
+                  {item.price * item.quoteQuantity}
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
     </div>

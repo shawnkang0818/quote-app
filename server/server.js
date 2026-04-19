@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Part from "./models/Part.js";
 import { adminAuth } from "./middleware/adminAuth.js";
+import Quote from "./models/Quote.js";
 
 dotenv.config();
 
@@ -67,4 +68,25 @@ const PORT = process.env.PORT || 5001;
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+});
+
+//添加保存报价 API
+app.post("/api/quotes", async (req, res) => {
+  try {
+    const newQuote = new Quote(req.body);
+    const savedQuote = await newQuote.save();
+    res.json(savedQuote);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+//获取历史报价
+app.get("/api/quotes", async (req, res) => {
+  try {
+    const quotes = await Quote.find().sort({ createdAt: -1 });
+    res.json(quotes);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
