@@ -37,32 +37,56 @@ function App() {
     });
   };
 
-const total = quoteItems.reduce(
-  (sum, item) => sum + item.price * item.quoteQuantity,
-  0
-);
+  const total = quoteItems.reduce(
+    (sum, item) => sum + item.price * item.quoteQuantity,
+    0
+  );
 
-const generatePDF = () => {
-  const doc = new jsPDF();
+  const removeFromQuote = (id) => {
+    setQuoteItems(quoteItrems.filter(item => item.id !== id));
+  };
 
-  doc.setFontSize(18);
-  doc.text("Quotation", 20, 20);
-
-  let y = 40;
-
-  quoteItems.forEach((item) => {
-    doc.text(
-      `${item.name} x ${item.quoteQuantity} - $${item.price * item.quoteQuantity}`,
-      20,
-      y
+  const increaseQuantity = (id) => {
+    setQuoteItems(items =>
+      items.map(item =>
+        item._id === id
+          ? { ...item, quoteQuantity: item.quoteQuantity + 1 }
+          : item
+      )
     );
-    y += 10;
-  });
+  };
 
-  doc.text(`Total: $${total}`, 20, y + 10);
+  const decreaseQuantity = (id) => {
+    setQuoteItems(items =>
+      items.map(item =>
+        item._id === id && item.quoteQuantity > 1
+          ? { ...item, quoteQuantity: item.quoteQuantity - 1 }
+          : item
+      )
+    );
+  };
 
-  doc.save("quote.pdf");
-};
+  const generatePDF = () => {
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text("Quotation", 20, 20);
+
+    let y = 40;
+
+    quoteItems.forEach((item) => {
+      doc.text(
+        `${item.name} x ${item.quoteQuantity} - $${item.price * item.quoteQuantity}`,
+        20,
+        y
+      );
+      y += 10;
+    });
+
+    doc.text(`Total: $${total}`, 20, y + 10);
+
+    doc.save("quote.pdf");
+  };
 
   useEffect(() => {
     fetchParts();
@@ -369,12 +393,40 @@ const generatePDF = () => {
 
           {quoteItems.length === 0 && <p>No items selected</p>}
 
-          {quoteItems.map((item) => (
-            <div key={item._id} className="flex justify-between mb-2">
-              <span>{item.name} x {item.quoteQuantity}</span>
+          {quoteItems.map(item => (
+            <div key={item._id} className="flex justify-between items-center mb-2">
+              
+              <span>{item.name}</span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => decreaseQuantity(item._id)}
+                  className="bg-gray-300 px-2 rounded"
+                >
+                  -
+                </button>
+
+                <span>{item.quoteQuantity}</span>
+
+                <button
+                  onClick={() => increaseQuantity(item._id)}
+                  className="bg-gray-300 px-2 rounded"
+                >
+                  +
+                </button>
+              </div>
+
               <span>${item.price * item.quoteQuantity}</span>
+
+              <button
+                onClick={() => removeFromQuote(item._id)}
+                className="bg-red-500 text-white px-2 py-1 rounded"
+              >
+                Remove
+              </button>
             </div>
           ))}
+
           <button
             onClick={generatePDF}
             className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
@@ -384,6 +436,14 @@ const generatePDF = () => {
         </div>
         <div className="mt-4 font-bold">
           Total: ${total}
+        </div>
+        <div>
+          <button
+            onClick={() => setQuoteItems([])}
+            className="mt-4 bg-gray-500 text-white px-4 py-2 rounded"
+          >
+            Clear Quote
+          </button>
         </div>
       </div>
     </div>
