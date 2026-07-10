@@ -16,6 +16,15 @@ function App() {
   const [quoteItems, setQuoteItems] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [customerName, setCustomerName] = useState("");
+  const currentYear = new Date().getFullYear();
+  const [vehicle, setVehicle] = useState({
+    year: "",
+    make: "",
+    model: "",
+  });
+
+  const [makes, setMakes] = useState([]);
+  const [models, setModels] = useState([]);
   
 
   const fetchParts = () => {
@@ -71,6 +80,8 @@ function App() {
   };
 
   const generatePDF = () => {
+    console.log("Vehicle when generating PDF: ", vehicle);
+
     if (quoteItems.length === 0) {
       setErrorMessage("No items in quote.");
       return;
@@ -116,6 +127,26 @@ function App() {
 
     doc.setFont("helvetica", "bold");
     doc.text("Bill To:", 14, 48);
+    const vehicleText = [
+        vehicle.year,
+        vehicle.make,
+        vehicle.model,
+      ]
+        .filter(Boolean)
+        .join(" ");
+
+      console.log("Vehicle when generating PDF:", vehicle);
+      console.log("Vehicle text:", vehicleText);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(customerName || "Walk-in Customer", 14, 54);
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Vehicle:", 14, 62);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(vehicleText, 14, 68);
+
     doc.setFont("helvetica", "normal");
     doc.text(displayCustomerName, 14, 54);
 
@@ -128,7 +159,7 @@ function App() {
     ]);
 
     autoTable(doc, {
-      startY: 62,
+      startY: 76,
       head: [["#", "Part Name", "Unit Price", "Qty", "Line Total"]],
       body: tableBody,
       theme: "grid",
@@ -307,6 +338,60 @@ function App() {
     setErrorMessage("");
   };
 
+  const handleYearChange = (e) => {
+    const selectedYear = e.target.value;
+
+    setVehicle({
+      year: selectedYear,
+      make: "",
+      model: "",
+    });
+
+    setModels([]);
+
+    if (!selectedYear) {
+      setMakes([]);
+      return;
+    }
+
+    fetch(`http://localhost:5001/api/vehicles/makes?year=${selectedYear}`)
+      .then((res) => res.json())
+      .then((data) => setMakes(data))
+      .catch((err) => console.error(err));
+  };
+  
+  const handleMakeChange = (e) => {
+    const selectedMake = e.target.value;
+
+    setVehicle({
+      ...vehicle,
+      make: selectedMake,
+      model: "",
+    });
+
+    if (!selectedMake) {
+      setModels([]);
+      return;
+    }
+
+    fetch(
+      `http://localhost:5001/api/vehicles/models?year=${vehicle.year}&make=${selectedMake}`
+    )
+      .then((res) => res.json())
+      .then((data) => setModels(data))
+      .catch((err) => console.error(err));
+  };
+  
+  const handleModelChange = (e) => {
+    setVehicle({
+      ...vehicle,
+      model: e.target.value,
+    });
+  };
+
+
+
+
   //获取历史报价
   const fetchQuotes = () => {
     fetch("http://localhost:5001/api/quotes")
@@ -317,41 +402,49 @@ function App() {
 
   //保存当前报价
   const saveQuote = () => {
-  if (quoteItems.length === 0) {
-    setErrorMessage("No items in quote.");
-    return;
-  }
+    if (quoteItems.length === 0) {
+      setErrorMessage("No items in quote.");
+      return;
+    }
 
-  fetch("http://localhost:5001/api/quotes", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      items: quoteItems.map((item) => ({
-        partId: item._id,
-        name: item.name,
-        price: item.price,
-        quoteQuantity: item.quoteQuantity,
-      })),
-      total,
-    }),
-  })
-    .then((res) => {
-      if (!res.ok) {
-        throw new Error("Failed to save quote");
-      }
-      return res.json();
+    fetch("http://localhost:5001/api/quotes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        customerName: customerName || "Walk-in Customer",
+        vehicle,
+        items: quoteItems.map((item) => ({
+          partId: item._id,
+          name: item.name,
+          price: item.price,
+          quoteQuantity: item.quoteQuantity,
+        })),
+        total,
+      }),
     })
-    .then(() => {
-      setErrorMessage("");
-      fetchQuotes();
-    })
-    .catch((err) => {
-      console.error(err);
-      setErrorMessage("Unable to save quote.");
-    });
-};
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to save quote");
+        }
+        return res.json();
+      })
+      .then(() => {
+        setErrorMessage("");
+        fetchQuotes();
+      })
+      .catch((err) => {
+        console.error(err);
+        setErrorMessage("Unable to save quote.");
+      });
+  };
+
+  const years = Array.from(
+    { length: currentYear - 1990 + 1 },
+    (_, index) => currentYear - index
+  );
+
 
   return (
     <div className="min-h-screen bg-slate-100 py-8 px-4">
@@ -528,7 +621,50 @@ function App() {
             onChange={(e) => setCustomerName(e.target.value)}
             className="border rounded-lg px-4 py-2 mb-4 w-full"
           />
+          <div className="grid grid-cols-1 gap-3 mb-4">
+            <select
+              value={vehicle.year}
+              onChange={handleYearChange}
+              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select Year</option>
+              {years.map((year) => (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={vehicle.make}
+              onChange={handleMakeChange}
+              disabled={!vehicle.year}
+              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+            >
+              <option value="">Select Make</option>
+              {makes.map((make, index) => (
+                <option key={index} value={make.make}>
+                  {make.make}
+                </option>
+              ))}
+            </select>
+
+            <select
+              value={vehicle.model}
+              onChange={handleModelChange}
+              disabled={!vehicle.make}
+              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
+            >
+              <option value="">Select Model</option>
+              {models.map((model, index) => (
+                <option key={index} value={model.model}>
+                  {model.model}
+                </option>
+              ))}
+            </select>
+          </div>
           {quoteItems.length === 0 && <p>No items selected</p>}
+
 
           {quoteItems.map(item => (
             <div key={item._id} className="flex justify-between items-center mb-2">
@@ -602,7 +738,11 @@ function App() {
               <p className="text-sm text-gray-500 mb-2">
                 {new Date(quote.createdAt).toLocaleString()}
               </p>
-
+              {quote.vehicle?.year && (
+                <p className="text-sm text-slate-600 mb-2">
+                  Vehicle: {quote.vehicle.year} {quote.vehicle.make} {quote.vehicle.model}
+                </p>
+              )}
               {quote.items.map((item, index) => (
                 <div key={index} className="text-sm">
                   {item.name} x {item.quoteQuantity} - $

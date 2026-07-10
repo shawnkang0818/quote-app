@@ -66,6 +66,48 @@ app.delete("/api/parts/:id", adminAuth, async (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
+// Get vehicle makes by year
+app.get("/api/vehicles/makes", async (req, res) => {
+  try {
+    const { year } = req.query;
+
+    if (!year) {
+      return res.status(400).json({ message: "Year is required" });
+    }
+
+    const response = await fetch(
+      `https://api.nhtsa.gov/products/vehicle/makes?modelYear=${year}&issueType=r`
+    );
+
+    const data = await response.json();
+
+    res.json(data.results || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get vehicle models by year and make
+app.get("/api/vehicles/models", async (req, res) => {
+  try {
+    const { year, make } = req.query;
+
+    if (!year || !make) {
+      return res.status(400).json({ message: "Year and make are required" });
+    }
+
+    const response = await fetch(
+      `https://api.nhtsa.gov/products/vehicle/models?modelYear=${year}&make=${make}&issueType=r`
+    );
+
+    const data = await response.json();
+
+    res.json(data.results || []);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

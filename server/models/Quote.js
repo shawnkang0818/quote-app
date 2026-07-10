@@ -2,6 +2,12 @@ import mongoose from "mongoose";
 
 const quoteSchema = new mongoose.Schema(
   {
+    customerName: String,
+    vehicle: {
+      year: String,
+      make: String,
+      model: String,
+    },
     items: [
       {
         partId: {
