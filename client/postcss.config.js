@@ -1,8 +1,6 @@
-import autoprefixer from "autoprefixer";
-
-export default{
+export default {
   plugins: {
     tailwindcss: {},
     autoprefixer: {},
   },
-}
+};
