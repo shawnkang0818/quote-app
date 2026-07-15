@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import { createQuote } from "../services/quotesService";
 
 function DashboardPage() {
   const [parts, setParts] = useState([]);
@@ -18,7 +19,6 @@ function DashboardPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [editingPartId, setEditingPartId] = useState(null);
   const [quoteItems, setQuoteItems] = useState([]);
-  const [quotes, setQuotes] = useState([]);
   const [customerName, setCustomerName] = useState("");
   const currentYear = new Date().getFullYear();
   const [vehicle, setVehicle] = useState({
@@ -35,13 +35,6 @@ function DashboardPage() {
     fetch("http://localhost:5001/api/parts")
       .then((res) => res.json())
       .then((data) => setParts(data))
-      .catch((err) => console.error(err));
-  };
-
-  const fetchQuotes = () => {
-    fetch("http://localhost:5001/api/quotes")
-      .then((res) => res.json())
-      .then((data) => setQuotes(data))
       .catch((err) => console.error(err));
   };
 
@@ -216,7 +209,6 @@ function DashboardPage() {
 
   useEffect(() => {
     fetchParts();
-    fetchQuotes();
   }, []);
 
   const handleChange = (e) => {
@@ -394,18 +386,14 @@ function DashboardPage() {
 
 
   //保存当前报价
-  const saveQuote = () => {
+  const saveQuote = async () => {
     if (quoteItems.length === 0) {
       setErrorMessage("No items in quote.");
       return;
     }
 
-    fetch("http://localhost:5001/api/quotes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
+    try {
+      await createQuote({
         customerName: customerName || "Walk-in Customer",
         vehicle,
         items: quoteItems.map((item) => ({
@@ -415,22 +403,13 @@ function DashboardPage() {
           quoteQuantity: item.quoteQuantity,
         })),
         total,
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to save quote");
-        }
-        return res.json();
-      })
-      .then(() => {
-        setErrorMessage("");
-        fetchQuotes();
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage("Unable to save quote.");
       });
+
+      setErrorMessage("");
+    } catch (err) {
+      console.error(err);
+      setErrorMessage("Unable to save quote.");
+    }
   };
 
   const years = Array.from(
@@ -719,34 +698,6 @@ function DashboardPage() {
           >
             Clear Quote
           </button>
-        </div>
-        <div className="mt-10 bg-white p-6 rounded-xl shadow">
-          <h2 className="text-xl font-semibold mb-4">Quote History</h2>
-
-          {quotes.length === 0 && <p>No saved quotes yet.</p>}
-
-          {quotes.map((quote) => (
-            <div key={quote._id} className="border rounded-lg p-4 mb-4">
-              
-              <p className="text-sm text-gray-500 mb-2">
-                {new Date(quote.createdAt).toLocaleString()}
-              </p>
-              {quote.vehicle?.year && (
-                <p className="text-sm text-slate-600 mb-2">
-                  Vehicle: {quote.vehicle.year} {quote.vehicle.make} {quote.vehicle.model}
-                </p>
-              )}
-              {quote.items.map((item, index) => (
-                <div key={index} className="text-sm">
-                  {item.name} x {item.quoteQuantity} - $
-                  {item.price * item.quoteQuantity}
-                </div>
-              ))}
-              <p className="font-semibold">
-                Total: ${quote.total}
-              </p>
-            </div>
-          ))}
         </div>
       </div>
     </div>
