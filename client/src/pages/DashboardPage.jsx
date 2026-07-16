@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
+import PartsTable from "../components/inventory/PartsTable";
+import QuoteBuilder from "../components/quote/QuoteBuilder";
 import { createQuote } from "../services/quotesService";
 
 function DashboardPage() {
@@ -419,289 +422,167 @@ function DashboardPage() {
 
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 px-4">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">Parts Management</h1>
+    <div>
+      <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
+            Workspace
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">
+            Create Quote
+          </h1>
+          <p className="mt-2 text-slate-500">
+            Select a customer, vehicle, and parts for a new quotation.
+          </p>
+        </div>
 
-          {isAdmin ? (
+        {isAdmin ? (
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-medium text-emerald-700">
+              Admin Mode
+            </span>
             <button
+              type="button"
               onClick={handleAdminLogout}
-              className="bg-gray-700 hover:bg-gray-800 text-white px-4 py-2 rounded-lg"
+              className="rounded-xl bg-slate-800 px-4 py-2.5 font-medium text-white transition hover:bg-slate-900"
             >
               Exit Admin Mode
             </button>
-          ) : (
-            <span className="text-sm text-gray-500">View Mode</span>
-          )}
-        </div>
-
-        {!isAdmin && (
-          <div className="bg-white shadow-md rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">Admin Access</h2>
-
-            <form
-              onSubmit={handleAdminLogin}
-              className="flex flex-col md:flex-row gap-4"
-            >
-              <input
-                type="password"
-                placeholder="Enter admin password"
-                value={adminPassword}
-                onChange={(e) => setAdminPassword(e.target.value)}
-                className="border rounded-lg px-4 py-2 flex-1"
-              />
-
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2"
-              >
-                Enter Admin Mode
-              </button>
-            </form>
-
-            {errorMessage && (
-              <p className="text-red-500 mt-3 text-sm">{errorMessage}</p>
-            )}
           </div>
+        ) : (
+          <span className="self-start rounded-full bg-slate-200 px-3 py-1 text-sm font-medium text-slate-600 sm:self-auto">
+            View Mode
+          </span>
         )}
+      </header>
 
-        {isAdmin && (
-          <div className="bg-white shadow-md rounded-xl p-6 mb-8">
-            <h2 className="text-xl font-semibold mb-4">
-              {editingPartId ? "Edit Part" : "Add New Part"}
-            </h2>
+      {!isAdmin && (
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-950">Admin Access</h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Enter the administrator password to manage inventory.
+          </p>
 
-            <form
-              onSubmit={handleSubmit}
-              className="grid grid-cols-1 md:grid-cols-4 gap-4"
-            >
-              <input
-                type="text"
-                name="name"
-                placeholder="Part Name"
-                value={formData.name}
-                onChange={handleChange}
-                className="border rounded-lg px-4 py-2"
-                required
-              />
-
-              <input
-                type="number"
-                name="price"
-                placeholder="Price"
-                value={formData.price}
-                onChange={handleChange}
-                className="border rounded-lg px-4 py-2"
-                required
-              />
-
-              <input
-                type="number"
-                name="quantity"
-                placeholder="Quantity"
-                value={formData.quantity}
-                onChange={handleChange}
-                className="border rounded-lg px-4 py-2"
-                required
-              />
-
-              <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white rounded-lg px-4 py-2"
-              >
-                {editingPartId ? "Update Part" : "Add Part"}
-              </button>
-            </form>
-
-            {editingPartId && (
-              <button
-                onClick={handleCancelEdit}
-                className="mt-4 bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg"
-              >
-                Cancel Edit
-              </button>
-            )}
-
-            {errorMessage && (
-              <p className="text-red-500 mt-3 text-sm">{errorMessage}</p>
-            )}
-          </div>
-        )}
-
-        <div className="bg-white shadow-md rounded-xl p-6">
-          <h2 className="text-xl font-semibold mb-4">Parts List</h2>
-
-          <table className="table-auto border border-gray-300 w-full">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border px-4 py-2 text-left">Name</th>
-                <th className="border px-4 py-2 text-left">Price</th>
-                <th className="border px-4 py-2 text-left">Quantity</th>
-                <th className="border px-4 py-2 text-left">Add</th>
-                {isAdmin && (
-                  <th className="border px-4 py-2 text-left">Actions</th>
-                )}
-              </tr>
-            </thead>
-
-            <tbody>
-              {parts.map((part) => (
-                <tr key={part._id}>
-                  <td className="border px-4 py-2">{part.name}</td>
-                  <td className="border px-4 py-2">${part.price}</td>
-                  <td className="border px-4 py-2">{part.quantity}</td>
-                  <td className="border px-4 py-2">
-                    <button
-                      onClick={() => addToQuote(part)}
-                      className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded-lg"
-                    >
-                      Add
-                    </button>
-                  </td>
-
-                  {isAdmin && (
-                    <td className="border px-4 py-2">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleEdit(part)}
-                          className="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded-lg"
-                        >
-                          Edit
-                        </button>
-
-                        <button
-                          onClick={() => handleDelete(part._id)}
-                          className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-lg"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <div className="mt-10 bg-white p-6 rounded-xl shadow">
-          <h2 className="text-xl font-semibold mb-4">Quote Builder</h2>
-          <input
-            type="text"
-            placeholder="Customer Name"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="border rounded-lg px-4 py-2 mb-4 w-full"
-          />
-          <div className="grid grid-cols-1 gap-3 mb-4">
-            <select
-              value={vehicle.year}
-              onChange={handleYearChange}
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">Select Year</option>
-              {years.map((year) => (
-                <option key={year} value={year}>
-                  {year}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={vehicle.make}
-              onChange={handleMakeChange}
-              disabled={!vehicle.year}
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
-            >
-              <option value="">Select Make</option>
-              {makes.map((make, index) => (
-                <option key={index} value={make.make}>
-                  {make.make}
-                </option>
-              ))}
-            </select>
-
-            <select
-              value={vehicle.model}
-              onChange={handleModelChange}
-              disabled={!vehicle.make}
-              className="w-full border border-slate-300 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
-            >
-              <option value="">Select Model</option>
-              {models.map((model, index) => (
-                <option key={index} value={model.model}>
-                  {model.model}
-                </option>
-              ))}
-            </select>
-          </div>
-          {quoteItems.length === 0 && <p>No items selected</p>}
-
-
-          {quoteItems.map(item => (
-            <div key={item._id} className="flex justify-between items-center mb-2">
-              
-              <span>{item.name}</span>
-
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => decreaseQuantity(item._id)}
-                  className="bg-gray-300 px-2 rounded"
-                >
-                  -
-                </button>
-
-                <span>{item.quoteQuantity}</span>
-
-                <button
-                  onClick={() => increaseQuantity(item._id)}
-                  className="bg-gray-300 px-2 rounded"
-                >
-                  +
-                </button>
-              </div>
-
-              <span>${item.price * item.quoteQuantity}</span>
-
-              <button
-                onClick={() => removeFromQuote(item._id)}
-                className="bg-red-500 text-white px-2 py-1 rounded"
-              >
-                Remove
-              </button>
-            </div>
-          ))}
-
-          <div className="mt-4 flex gap-4">
-            <button
-              onClick={generatePDF}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
-            >
-              Generate PDF
-            </button>
-
-            <button
-              onClick={saveQuote}
-              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
-            >
-              Save Quote
-            </button>
-          </div>
-        </div>
-        <div className="mt-4 font-bold">
-          Total: ${total}
-        </div>
-        <div>
-          <button
-            onClick={() => setQuoteItems([])}
-            className="mt-4 bg-gray-500 text-white px-4 py-2 rounded"
+          <form
+            onSubmit={handleAdminLogin}
+            className="mt-5 flex flex-col gap-3 md:flex-row"
           >
-            Clear Quote
-          </button>
-        </div>
+            <input
+              type="password"
+              placeholder="Enter admin password"
+              value={adminPassword}
+              onChange={(event) => setAdminPassword(event.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition hover:bg-blue-700"
+            >
+              Enter Admin Mode
+            </button>
+          </form>
+
+          {errorMessage && (
+            <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
+          )}
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-xl font-semibold text-slate-950">
+            {editingPartId ? "Edit Part" : "Add New Part"}
+          </h2>
+
+          <form
+            onSubmit={handleSubmit}
+            className="mt-5 grid gap-4 md:grid-cols-4"
+          >
+            <input
+              type="text"
+              name="name"
+              placeholder="Part Name"
+              value={formData.name}
+              onChange={handleChange}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              required
+            />
+            <input
+              type="number"
+              name="price"
+              placeholder="Price"
+              value={formData.price}
+              onChange={handleChange}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              required
+            />
+            <input
+              type="number"
+              name="quantity"
+              placeholder="Quantity"
+              value={formData.quantity}
+              onChange={handleChange}
+              className="rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              required
+            />
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-4 py-2.5 font-medium text-white transition hover:bg-blue-700"
+            >
+              {editingPartId ? "Update Part" : "Add Part"}
+            </button>
+          </form>
+
+          {editingPartId && (
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              className="mt-4 rounded-xl bg-slate-200 px-4 py-2.5 font-medium text-slate-800 transition hover:bg-slate-300"
+            >
+              Cancel Edit
+            </button>
+          )}
+
+          {errorMessage && (
+            <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
+          )}
+        </section>
+      )}
+
+      <CustomerVehicleCard
+        customerName={customerName}
+        makes={makes}
+        models={models}
+        onCustomerChange={(event) => setCustomerName(event.target.value)}
+        onMakeChange={handleMakeChange}
+        onModelChange={handleModelChange}
+        onYearChange={handleYearChange}
+        vehicle={vehicle}
+        years={years}
+      />
+
+      <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,1fr)]">
+        <PartsTable
+          isAdmin={isAdmin}
+          onAddToQuote={addToQuote}
+          onDelete={handleDelete}
+          onEdit={handleEdit}
+          parts={parts}
+        />
+
+        <QuoteBuilder
+          errorMessage={errorMessage}
+          onClear={() => setQuoteItems([])}
+          onDecreaseQuantity={decreaseQuantity}
+          onGeneratePDF={generatePDF}
+          onIncreaseQuantity={increaseQuantity}
+          onRemove={removeFromQuote}
+          onSaveQuote={saveQuote}
+          quoteItems={quoteItems}
+          total={total}
+        />
       </div>
     </div>
-    
   );
 }
 
