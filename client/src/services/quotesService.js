@@ -1,27 +1,33 @@
-const API_BASE_URL = "http://localhost:5001/api";
+import { apiRequest } from "./apiClient";
 
-async function parseResponse(response) {
-  if (!response.ok) {
-    const data = await response.json().catch(() => ({}));
-    throw new Error(data.error || data.message || "Request failed");
-  }
-
-  return response.json();
+function adminHeaders(token) {
+  return { Authorization: `Bearer ${token}` };
 }
 
-export async function getQuotes() {
-  const response = await fetch(`${API_BASE_URL}/quotes`);
-  return parseResponse(response);
+export async function getQuotes(filters = {}, token) {
+  const query = new URLSearchParams();
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== "" && value !== undefined && value !== null) {
+      query.set(key, value);
+    }
+  });
+  return apiRequest(`/quotes?${query.toString()}`, {
+    headers: adminHeaders(token),
+  });
 }
 
 export async function createQuote(quote) {
-  const response = await fetch(`${API_BASE_URL}/quotes`, {
+  return apiRequest("/quotes", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(quote),
   });
+}
 
-  return parseResponse(response);
+export async function getQuote(id, token) {
+  return apiRequest(`/quotes/${encodeURIComponent(id)}`, {
+    headers: adminHeaders(token),
+  });
 }

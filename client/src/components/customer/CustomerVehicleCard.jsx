@@ -1,5 +1,6 @@
 function CustomerVehicleCard({
   customerName,
+  errorMessage,
   makes,
   models,
   onCustomerChange,
@@ -90,6 +91,11 @@ function CustomerVehicleCard({
           </select>
         </label>
       </div>
+      {errorMessage && (
+        <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </p>
+      )}
     </section>
   );
 }

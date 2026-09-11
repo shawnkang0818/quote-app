@@ -1,4 +1,5 @@
 function PartsTable({
+  errorMessage,
   isAdmin,
   onAddToQuote,
   onDelete,
@@ -21,6 +22,12 @@ function PartsTable({
           {parts.length} parts
         </span>
       </div>
+
+      {errorMessage && (
+        <p className="mb-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </p>
+      )}
 
       {parts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
@@ -59,9 +66,10 @@ function PartsTable({
                     <button
                       type="button"
                       onClick={() => onAddToQuote(part)}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 font-medium text-white transition hover:bg-emerald-700"
+                      disabled={Number(part.quantity) <= 0}
+                      className="rounded-lg bg-emerald-600 px-3 py-2 font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
                     >
-                      Add
+                      {Number(part.quantity) <= 0 ? "Out of stock" : "Add"}
                     </button>
                   </td>
 

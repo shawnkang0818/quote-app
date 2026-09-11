@@ -1,13 +1,21 @@
+import LaborSection from "./LaborSection";
+
 function QuoteBuilder({
   errorMessage,
+  isSaving,
+  isSaved,
+  laborItems,
+  onAddLabor,
   onClear,
   onDecreaseQuantity,
   onGeneratePDF,
   onIncreaseQuantity,
   onRemove,
+  onRemoveLabor,
   onSaveQuote,
   quoteItems,
-  total,
+  saveMessage,
+  totals,
 }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm xl:sticky xl:top-6">
@@ -78,16 +86,42 @@ function QuoteBuilder({
         </div>
       )}
 
+      <LaborSection
+        laborItems={laborItems}
+        onAdd={onAddLabor}
+        onRemove={onRemoveLabor}
+      />
+
       <div className="mt-6 border-t border-slate-200 pt-5">
-        <div className="flex items-center justify-between text-lg font-bold text-slate-950">
-          <span>Parts total</span>
-          <span>${Number(total).toFixed(2)}</span>
+        <div className="space-y-2 text-sm text-slate-600">
+          <div className="flex justify-between">
+            <span>Parts</span>
+            <span>${totals.partsSubtotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Labor</span>
+            <span>${totals.laborTotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Tax ({(totals.taxRate * 100).toFixed(3)}%)</span>
+            <span>${totals.taxAmount.toFixed(2)}</span>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between border-t border-slate-200 pt-3 text-lg font-bold text-slate-950">
+          <span>Grand total</span>
+          <span>${totals.grandTotal.toFixed(2)}</span>
         </div>
       </div>
 
       {errorMessage && (
         <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
+        </p>
+      )}
+
+      {saveMessage && (
+        <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {saveMessage}
         </p>
       )}
 
@@ -102,14 +136,19 @@ function QuoteBuilder({
         <button
           type="button"
           onClick={onSaveQuote}
-          className="rounded-xl bg-emerald-600 px-4 py-2.5 font-medium text-white transition hover:bg-emerald-700"
+          disabled={
+            isSaving ||
+            isSaved ||
+            (quoteItems.length === 0 && laborItems.length === 0)
+          }
+          className="rounded-xl bg-emerald-600 px-4 py-2.5 font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Save Quote
+          {isSaving ? "Saving..." : isSaved ? "Saved" : "Save Quote"}
         </button>
         <button
           type="button"
           onClick={onClear}
-          disabled={quoteItems.length === 0}
+          disabled={quoteItems.length === 0 && laborItems.length === 0}
           className="rounded-xl bg-slate-200 px-4 py-2.5 font-medium text-slate-800 transition hover:bg-slate-300 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-2 xl:col-span-1 2xl:col-span-2"
         >
           Clear Quote

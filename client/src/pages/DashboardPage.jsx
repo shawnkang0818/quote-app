@@ -4,8 +4,24 @@ import PartForm from "../components/admin/PartForm";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
 import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
+import {
+  createPart,
+  deletePart,
+  getParts,
+  updatePart,
+} from "../services/partsService";
 import { createQuote } from "../services/quotesService";
-import { generateQuotePDF } from "../utils/generateQuotePDF";
+import {
+  getVehicleMakes,
+  getVehicleModels,
+} from "../services/vehiclesService";
+import { calculateQuoteTotals } from "../utils/calculateQuoteTotals";
+import {
+  getStoredAdminToken,
+  loginAdmin,
+  logoutAdmin,
+  verifyAdminSession,
+} from "../services/authService";
 
 function DashboardPage() {
   const [parts, setParts] = useState([]);
@@ -14,15 +30,19 @@ function DashboardPage() {
     price: "",
     quantity: "",
   });
-  const [isAdmin, setIsAdmin] = useState(
-    () => localStorage.getItem("isAdmin") === "true"
-  );
-  const [adminPassword, setAdminPassword] = useState(
-    () => localStorage.getItem("adminPassword") || ""
-  );
-  const [errorMessage, setErrorMessage] = useState("");
+  const [adminToken, setAdminToken] = useState(getStoredAdminToken);
+  const [isAdmin, setIsAdmin] = useState(() => Boolean(getStoredAdminToken()));
+  const [adminPassword, setAdminPassword] = useState("");
+  const [adminError, setAdminError] = useState("");
+  const [inventoryError, setInventoryError] = useState("");
+  const [quoteError, setQuoteError] = useState("");
+  const [vehicleError, setVehicleError] = useState("");
   const [editingPartId, setEditingPartId] = useState(null);
   const [quoteItems, setQuoteItems] = useState([]);
+  const [laborItems, setLaborItems] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
   const [customerName, setCustomerName] = useState("");
   const currentYear = new Date().getFullYear();
   const [vehicle, setVehicle] = useState({
@@ -35,17 +55,27 @@ function DashboardPage() {
   const [models, setModels] = useState([]);
   
 
-  const fetchParts = () => {
-    fetch("http://localhost:5001/api/parts")
-      .then((res) => res.json())
+  const loadParts = () =>
+    getParts()
       .then((data) => setParts(data))
-      .catch((err) => console.error(err));
-  };
+      .catch((error) => {
+        console.error(error);
+        setInventoryError("Unable to load parts inventory.");
+      });
 
   const addToQuote = (part) => {
-    setQuoteItems((prevItems) => {
-      const existing = prevItems.find((item) => item._id === part._id);
+    if (Number(part.quantity) <= 0) {
+      setQuoteError(`${part.name} is out of stock.`);
+      return;
+    }
 
+    const existing = quoteItems.find((item) => item._id === part._id);
+    if (existing?.quoteQuantity >= Number(part.quantity)) {
+      setQuoteError(`Only ${part.quantity} ${part.name} available.`);
+      return;
+    }
+
+    setQuoteItems((prevItems) => {
       if (existing) {
         return prevItems.map((item) =>
           item._id === part._id
@@ -56,25 +86,41 @@ function DashboardPage() {
 
       return [...prevItems, { ...part, quoteQuantity: 1 }];
     });
+    setQuoteError("");
+    setSaveMessage("");
+    setSavedQuoteNumber("");
   };
 
-  const total = quoteItems.reduce(
-    (sum, item) => sum + item.price * item.quoteQuantity,
-    0
-  );
+  const totals = calculateQuoteTotals({ quoteItems, laborItems });
 
   const removeFromQuote = (id) => {
     setQuoteItems((prevItems) => prevItems.filter((item) => item._id !== id));
+    setSaveMessage("");
+    setSavedQuoteNumber("");
   };
 
   const increaseQuantity = (id) => {
-    setQuoteItems(items =>
-      items.map(item =>
+    const selectedItem = quoteItems.find((item) => item._id === id);
+    if (
+      selectedItem &&
+      selectedItem.quoteQuantity >= Number(selectedItem.quantity)
+    ) {
+      setQuoteError(
+        `Only ${selectedItem.quantity} ${selectedItem.name} available.`
+      );
+      return;
+    }
+
+    setQuoteItems((items) =>
+      items.map((item) =>
         item._id === id
           ? { ...item, quoteQuantity: item.quoteQuantity + 1 }
           : item
       )
     );
+    setQuoteError("");
+    setSaveMessage("");
+    setSavedQuoteNumber("");
   };
 
   const decreaseQuantity = (id) => {
@@ -85,21 +131,62 @@ function DashboardPage() {
           : item
       )
     );
+    setSaveMessage("");
+    setSavedQuoteNumber("");
   };
 
-  const generatePDF = () => {
+  const addLabor = (labor) => {
+    if (!labor.description || labor.hours <= 0 || labor.hourlyRate < 0) {
+      setQuoteError("Enter a labor description, hours, and a valid rate.");
+      return;
+    }
+    setLaborItems((items) => [
+      ...items,
+      { ...labor, id: crypto.randomUUID() },
+    ]);
+    setQuoteError("");
+    setSaveMessage("");
+    setSavedQuoteNumber("");
+  };
+
+  const removeLabor = (id) => {
+    setLaborItems((items) => items.filter((item) => item.id !== id));
+    setSaveMessage("");
+    setSavedQuoteNumber("");
+  };
+
+  const generatePDF = async () => {
     try {
-      generateQuotePDF({ customerName, quoteItems, vehicle });
-      setErrorMessage("");
+      const { generateQuotePDF } = await import("../utils/generateQuotePDF");
+      generateQuotePDF({
+        customerName,
+        laborItems,
+        quoteItems,
+        quoteNumber: savedQuoteNumber,
+        vehicle,
+      });
+      setQuoteError("");
     } catch (error) {
       console.error(error);
-      setErrorMessage(error.message || "Unable to generate PDF.");
+      setQuoteError(error.message || "Unable to generate PDF.");
     }
   };
 
   useEffect(() => {
-    fetchParts();
+    loadParts();
+    localStorage.removeItem("isAdmin");
+    localStorage.removeItem("adminPassword");
   }, []);
+
+  useEffect(() => {
+    if (!adminToken) return;
+    verifyAdminSession(adminToken).catch(() => {
+      sessionStorage.removeItem("adminToken");
+      setAdminToken("");
+      setIsAdmin(false);
+      setAdminError("Your admin session expired. Please sign in again.");
+    });
+  }, [adminToken]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -110,21 +197,28 @@ function DashboardPage() {
     });
   };
 
-  const handleAdminLogin = (e) => {
+  const handleAdminLogin = async (e) => {
     e.preventDefault();
 
-    if (adminPassword === "admin123") {
+    try {
+      const session = await loginAdmin(adminPassword);
       setIsAdmin(true);
-      setErrorMessage("");
-      localStorage.setItem("isAdmin", "true");
-      localStorage.setItem("adminPassword", adminPassword);
-    } else {
-      setErrorMessage("Incorrect admin password");
+      setAdminToken(session.token);
+      setAdminPassword("");
+      setAdminError("");
+      sessionStorage.setItem("adminToken", session.token);
+    } catch (error) {
+      console.error(error);
+      setAdminError(error.message || "Incorrect admin password");
     }
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    if (adminToken) {
+      logoutAdmin(adminToken).catch(() => {});
+    }
     setIsAdmin(false);
+    setAdminToken("");
     setAdminPassword("");
     setEditingPartId(null);
     setFormData({
@@ -132,8 +226,7 @@ function DashboardPage() {
       price: "",
       quantity: "",
     });
-    localStorage.removeItem("isAdmin");
-    localStorage.removeItem("adminPassword");
+    sessionStorage.removeItem("adminToken");
   };
 
   const handleEdit = (part) => {
@@ -143,72 +236,44 @@ function DashboardPage() {
       price: part.price,
       quantity: part.quantity,
     });
-    setErrorMessage("");
+    setInventoryError("");
   };
 
-  const handleDelete = (id) => {
-    fetch(`http://localhost:5001/api/parts/${id}`, {
-      method: "DELETE",
-      headers: {
-        "x-admin-password": adminPassword,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to delete part");
-        }
-        return res.json();
-      })
-      .then(() => {
-        fetchParts();
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage("Unable to delete part.");
-      });
+  const handleDelete = async (id) => {
+    try {
+      await deletePart(id, adminToken);
+      setInventoryError("");
+      await loadParts();
+    } catch (error) {
+      console.error(error);
+      setInventoryError(error.message || "Unable to delete part.");
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const url = editingPartId
-      ? `http://localhost:5001/api/parts/${editingPartId}`
-      : "http://localhost:5001/api/parts";
+    const partData = {
+      name: formData.name,
+      price: Number(formData.price),
+      quantity: Number(formData.quantity),
+    };
 
-    const method = editingPartId ? "PUT" : "POST";
+    try {
+      if (editingPartId) {
+        await updatePart(editingPartId, partData, adminToken);
+      } else {
+        await createPart(partData, adminToken);
+      }
 
-    fetch(url, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        "x-admin-password": adminPassword,
-      },
-      body: JSON.stringify({
-        name: formData.name,
-        price: Number(formData.price),
-        quantity: Number(formData.quantity),
-      }),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Failed to save part");
-        }
-        return res.json();
-      })
-      .then(() => {
-        setFormData({
-          name: "",
-          price: "",
-          quantity: "",
-        });
-        setEditingPartId(null);
-        setErrorMessage("");
-        fetchParts();
-      })
-      .catch((err) => {
-        console.error(err);
-        setErrorMessage("Unable to save part. Admin authorization failed.");
-      });
+      setFormData({ name: "", price: "", quantity: "" });
+      setEditingPartId(null);
+      setInventoryError("");
+      await loadParts();
+    } catch (error) {
+      console.error(error);
+      setInventoryError(error.message || "Unable to save part.");
+    }
   };
 
   const handleCancelEdit = () => {
@@ -218,10 +283,10 @@ function DashboardPage() {
       price: "",
       quantity: "",
     });
-    setErrorMessage("");
+    setInventoryError("");
   };
 
-  const handleYearChange = (e) => {
+  const handleYearChange = async (e) => {
     const selectedYear = e.target.value;
 
     setVehicle({
@@ -229,21 +294,27 @@ function DashboardPage() {
       make: "",
       model: "",
     });
+    setSaveMessage("");
+    setSavedQuoteNumber("");
 
+    setMakes([]);
     setModels([]);
 
     if (!selectedYear) {
-      setMakes([]);
       return;
     }
 
-    fetch(`http://localhost:5001/api/vehicles/makes?year=${selectedYear}`)
-      .then((res) => res.json())
-      .then((data) => setMakes(data))
-      .catch((err) => console.error(err));
+    try {
+      const data = await getVehicleMakes(selectedYear);
+      setMakes(data);
+      setVehicleError("");
+    } catch (error) {
+      console.error(error);
+      setVehicleError(error.message || "Unable to load vehicle makes.");
+    }
   };
   
-  const handleMakeChange = (e) => {
+  const handleMakeChange = async (e) => {
     const selectedMake = e.target.value;
 
     setVehicle({
@@ -251,18 +322,22 @@ function DashboardPage() {
       make: selectedMake,
       model: "",
     });
+    setSaveMessage("");
+    setSavedQuoteNumber("");
 
     if (!selectedMake) {
       setModels([]);
       return;
     }
 
-    fetch(
-      `http://localhost:5001/api/vehicles/models?year=${vehicle.year}&make=${selectedMake}`
-    )
-      .then((res) => res.json())
-      .then((data) => setModels(data))
-      .catch((err) => console.error(err));
+    try {
+      const data = await getVehicleModels(vehicle.year, selectedMake);
+      setModels(data);
+      setVehicleError("");
+    } catch (error) {
+      console.error(error);
+      setVehicleError(error.message || "Unable to load vehicle models.");
+    }
   };
   
   const handleModelChange = (e) => {
@@ -270,6 +345,8 @@ function DashboardPage() {
       ...vehicle,
       model: e.target.value,
     });
+    setSaveMessage("");
+    setSavedQuoteNumber("");
   };
 
 
@@ -277,13 +354,14 @@ function DashboardPage() {
 
   //保存当前报价
   const saveQuote = async () => {
-    if (quoteItems.length === 0) {
-      setErrorMessage("No items in quote.");
+    if (quoteItems.length === 0 && laborItems.length === 0) {
+      setQuoteError("Add at least one part or labor item.");
       return;
     }
 
+    setIsSaving(true);
     try {
-      await createQuote({
+      const savedQuote = await createQuote({
         customerName: customerName || "Walk-in Customer",
         vehicle,
         items: quoteItems.map((item) => ({
@@ -292,13 +370,21 @@ function DashboardPage() {
           price: item.price,
           quoteQuantity: item.quoteQuantity,
         })),
-        total,
+        laborItems: laborItems.map(({ description, hours, hourlyRate }) => ({
+          description,
+          hours,
+          hourlyRate,
+        })),
       });
 
-      setErrorMessage("");
+      setQuoteError("");
+      setSaveMessage(`Quote ${savedQuote.quoteNumber} saved successfully.`);
+      setSavedQuoteNumber(savedQuote.quoteNumber);
     } catch (err) {
       console.error(err);
-      setErrorMessage("Unable to save quote.");
+      setQuoteError(err.message || "Unable to save quote.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -343,10 +429,27 @@ function DashboardPage() {
         )}
       </header>
 
+      <CustomerVehicleCard
+        customerName={customerName}
+        errorMessage={vehicleError}
+        makes={makes}
+        models={models}
+        onCustomerChange={(event) => {
+          setCustomerName(event.target.value);
+          setSaveMessage("");
+          setSavedQuoteNumber("");
+        }}
+        onMakeChange={handleMakeChange}
+        onModelChange={handleModelChange}
+        onYearChange={handleYearChange}
+        vehicle={vehicle}
+        years={years}
+      />
+
       {!isAdmin && (
         <AdminAccess
           adminPassword={adminPassword}
-          errorMessage={errorMessage}
+          errorMessage={adminError}
           onPasswordChange={(event) =>
             setAdminPassword(event.target.value)
           }
@@ -357,7 +460,7 @@ function DashboardPage() {
       {isAdmin && (
         <PartForm
           editingPartId={editingPartId}
-          errorMessage={errorMessage}
+          errorMessage={inventoryError}
           formData={formData}
           onCancel={handleCancelEdit}
           onChange={handleChange}
@@ -365,20 +468,9 @@ function DashboardPage() {
         />
       )}
 
-      <CustomerVehicleCard
-        customerName={customerName}
-        makes={makes}
-        models={models}
-        onCustomerChange={(event) => setCustomerName(event.target.value)}
-        onMakeChange={handleMakeChange}
-        onModelChange={handleModelChange}
-        onYearChange={handleYearChange}
-        vehicle={vehicle}
-        years={years}
-      />
-
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,1fr)]">
         <PartsTable
+          errorMessage={inventoryError}
           isAdmin={isAdmin}
           onAddToQuote={addToQuote}
           onDelete={handleDelete}
@@ -387,15 +479,27 @@ function DashboardPage() {
         />
 
         <QuoteBuilder
-          errorMessage={errorMessage}
-          onClear={() => setQuoteItems([])}
+          errorMessage={quoteError}
+          isSaving={isSaving}
+          isSaved={Boolean(savedQuoteNumber)}
+          laborItems={laborItems}
+          onAddLabor={addLabor}
+          onClear={() => {
+            setQuoteItems([]);
+            setLaborItems([]);
+            setQuoteError("");
+            setSaveMessage("");
+            setSavedQuoteNumber("");
+          }}
           onDecreaseQuantity={decreaseQuantity}
           onGeneratePDF={generatePDF}
           onIncreaseQuantity={increaseQuantity}
           onRemove={removeFromQuote}
+          onRemoveLabor={removeLabor}
           onSaveQuote={saveQuote}
           quoteItems={quoteItems}
-          total={total}
+          saveMessage={saveMessage}
+          totals={totals}
         />
       </div>
     </div>

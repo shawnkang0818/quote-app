@@ -2,7 +2,18 @@ import mongoose from "mongoose";
 
 const quoteSchema = new mongoose.Schema(
   {
-    customerName: String,
+    quoteNumber: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true,
+      sparse: true,
+    },
+    customerName: {
+      type: String,
+      trim: true,
+      default: "Walk-in Customer",
+    },
     vehicle: {
       year: String,
       make: String,
@@ -14,14 +25,28 @@ const quoteSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Part",
         },
-        name: String,
-        price: Number,
-        quoteQuantity: Number,
+        name: { type: String, required: true, trim: true },
+        price: { type: Number, required: true, min: 0 },
+        quoteQuantity: { type: Number, required: true, min: 1 },
       },
     ],
+    laborItems: [
+      {
+        description: { type: String, required: true, trim: true },
+        hours: { type: Number, required: true, min: 0 },
+        hourlyRate: { type: Number, required: true, min: 0 },
+        total: { type: Number, required: true, min: 0 },
+      },
+    ],
+    partsSubtotal: { type: Number, required: true, min: 0 },
+    laborTotal: { type: Number, required: true, min: 0 },
+    subtotal: { type: Number, required: true, min: 0 },
+    taxRate: { type: Number, required: true, min: 0 },
+    taxAmount: { type: Number, required: true, min: 0 },
     total: {
       type: Number,
       required: true,
+      min: 0,
     },
   },
   { timestamps: true }

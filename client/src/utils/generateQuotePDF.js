@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import { calculateQuoteTotals } from "./calculateQuoteTotals";
 
 const COMPANY = {
   name: "Auto Parts Quote System",
@@ -7,27 +8,26 @@ const COMPANY = {
   contact: "Phone: (555) 123-4567 | Email: sales@example.com",
 };
 
-const TAX_RATE = 0.0875;
-
-export function generateQuotePDF({ customerName, quoteItems, vehicle }) {
-  if (quoteItems.length === 0) {
-    throw new Error("No items in quote.");
+export function generateQuotePDF({
+  customerName,
+  laborItems = [],
+  quoteItems = [],
+  quoteNumber: savedQuoteNumber,
+  vehicle = {},
+}) {
+  if (quoteItems.length === 0 && laborItems.length === 0) {
+    throw new Error("Add at least one part or labor item.");
   }
 
   const doc = new jsPDF();
-  const quoteNumber = `QT-${Date.now()}`;
+  const quoteNumber = savedQuoteNumber || `DRAFT-${Date.now()}`;
   const today = new Date().toLocaleDateString();
   const displayCustomerName = customerName || "Walk-in Customer";
   const vehicleText = [vehicle.year, vehicle.make, vehicle.model]
     .filter(Boolean)
     .join(" ");
 
-  const subtotal = quoteItems.reduce(
-    (sum, item) => sum + Number(item.price) * item.quoteQuantity,
-    0
-  );
-  const taxAmount = subtotal * TAX_RATE;
-  const grandTotal = subtotal + taxAmount;
+  const totals = calculateQuoteTotals({ quoteItems, laborItems });
 
   doc.setFontSize(20);
   doc.setFont("helvetica", "bold");
@@ -65,9 +65,19 @@ export function generateQuotePDF({ customerName, quoteItems, vehicle }) {
     `$${(Number(item.price) * item.quoteQuantity).toFixed(2)}`,
   ]);
 
+  laborItems.forEach((item, index) => {
+    tableBody.push([
+      quoteItems.length + index + 1,
+      `Labor: ${item.description}`,
+      `$${Number(item.hourlyRate).toFixed(2)}/hr`,
+      Number(item.hours),
+      `$${(Number(item.hourlyRate) * Number(item.hours)).toFixed(2)}`,
+    ]);
+  });
+
   autoTable(doc, {
     startY: 76,
-    head: [["#", "Part Name", "Unit Price", "Qty", "Line Total"]],
+    head: [["#", "Part / Labor", "Unit Price", "Qty/Hrs", "Line Total"]],
     body: tableBody,
     theme: "grid",
     styles: {
@@ -88,11 +98,12 @@ export function generateQuotePDF({ customerName, quoteItems, vehicle }) {
   const finalY = doc.lastAutoTable.finalY || 80;
 
   doc.setFont("helvetica", "normal");
-  doc.text(`Subtotal: $${subtotal.toFixed(2)}`, 140, finalY + 12);
-  doc.text(`Tax: $${taxAmount.toFixed(2)}`, 140, finalY + 20);
+  doc.text(`Parts: $${totals.partsSubtotal.toFixed(2)}`, 140, finalY + 12);
+  doc.text(`Labor: $${totals.laborTotal.toFixed(2)}`, 140, finalY + 20);
+  doc.text(`Tax: $${totals.taxAmount.toFixed(2)}`, 140, finalY + 28);
 
   doc.setFont("helvetica", "bold");
-  doc.text(`Total: $${grandTotal.toFixed(2)}`, 140, finalY + 30);
+  doc.text(`Total: $${totals.grandTotal.toFixed(2)}`, 140, finalY + 38);
 
   doc.setFont("helvetica", "bold");
   doc.text("Notes:", 14, finalY + 20);

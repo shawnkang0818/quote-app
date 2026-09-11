@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { getQuotes } from "../services/quotesService";
+import { getStoredAdminToken, loginAdmin } from "../services/authService";
 
 function formatCurrency(value) {
   return new Intl.NumberFormat("en-US", {
@@ -16,63 +18,109 @@ function formatVehicle(vehicle) {
 
 function QuoteHistoryPage() {
   const [quotes, setQuotes] = useState([]);
+  const [quoteNumberSearch, setQuoteNumberSearch] = useState("");
   const [customerSearch, setCustomerSearch] = useState("");
   const [vehicleSearch, setVehicleSearch] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    page: 1,
+    total: 0,
+    totalPages: 1,
+  });
+  const [adminToken, setAdminToken] = useState(getStoredAdminToken);
+  const [adminPassword, setAdminPassword] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     let ignore = false;
 
-    async function loadQuotes() {
+    if (!adminToken) {
+      setIsLoading(false);
+      return undefined;
+    }
+
+    setIsLoading(true);
+    const timer = setTimeout(async () => {
       try {
-        const data = await getQuotes();
+        const data = await getQuotes(
+          {
+            customer: customerSearch.trim(),
+            quoteNumber: quoteNumberSearch.trim(),
+            vehicle: vehicleSearch.trim(),
+            from: dateFrom,
+            to: dateTo,
+            page,
+            limit: 10,
+          },
+          adminToken
+        );
 
         if (!ignore) {
-          setQuotes(data);
+          setQuotes(data.quotes);
+          setPagination(data.pagination);
           setErrorMessage("");
         }
       } catch (error) {
         console.error(error);
 
         if (!ignore) {
-          setErrorMessage(
-            "Unable to load quote history. Make sure the backend is running."
-          );
+          if (error.status === 401) {
+            sessionStorage.removeItem("adminToken");
+            setAdminToken("");
+            setErrorMessage("Your admin session expired. Please sign in again.");
+          } else {
+            setErrorMessage(error.message || "Unable to load quote history.");
+          }
         }
       } finally {
         if (!ignore) {
           setIsLoading(false);
         }
       }
-    }
-
-    loadQuotes();
+    }, 300);
 
     return () => {
       ignore = true;
+      clearTimeout(timer);
     };
-  }, []);
+  }, [
+    adminToken,
+    customerSearch,
+    dateFrom,
+    dateTo,
+    page,
+    quoteNumberSearch,
+    vehicleSearch,
+  ]);
 
-  const filteredQuotes = useMemo(() => {
-    const customerQuery = customerSearch.trim().toLowerCase();
-    const vehicleQuery = vehicleSearch.trim().toLowerCase();
-
-    return quotes.filter((quote) => {
-      const customer = (quote.customerName || "Walk-in Customer").toLowerCase();
-      const vehicle = formatVehicle(quote.vehicle).toLowerCase();
-
-      return (
-        customer.includes(customerQuery) && vehicle.includes(vehicleQuery)
-      );
-    });
-  }, [customerSearch, quotes, vehicleSearch]);
-
-  const hasFilters = customerSearch || vehicleSearch;
+  const hasFilters =
+    quoteNumberSearch || customerSearch || vehicleSearch || dateFrom || dateTo;
 
   const clearFilters = () => {
     setCustomerSearch("");
+    setQuoteNumberSearch("");
     setVehicleSearch("");
+    setDateFrom("");
+    setDateTo("");
+    setPage(1);
+  };
+
+  const handleAdminLogin = async (event) => {
+    event.preventDefault();
+    setIsLoading(true);
+    try {
+      const session = await loginAdmin(adminPassword);
+      sessionStorage.setItem("adminToken", session.token);
+      setAdminToken(session.token);
+      setAdminPassword("");
+      setErrorMessage("");
+    } catch (error) {
+      setErrorMessage(error.message);
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -89,16 +137,64 @@ function QuoteHistoryPage() {
             </p>
           </div>
 
-          {!isLoading && !errorMessage && (
+          {adminToken && !isLoading && !errorMessage && (
             <p className="text-sm font-medium text-slate-500">
-              Showing {filteredQuotes.length} of {quotes.length}
+              Showing {quotes.length} of {pagination.total}
             </p>
           )}
         </div>
       </header>
 
+      {!adminToken && (
+        <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold text-slate-950">
+            Admin access required
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Quote history contains customer information and is restricted.
+          </p>
+          <form onSubmit={handleAdminLogin} className="mt-4 flex max-w-xl gap-3">
+            <input
+              type="password"
+              value={adminPassword}
+              onChange={(event) => setAdminPassword(event.target.value)}
+              placeholder="Admin password"
+              className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              required
+            />
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white disabled:opacity-50"
+            >
+              {isLoading ? "Checking..." : "Unlock history"}
+            </button>
+          </form>
+          {errorMessage && (
+            <p className="mt-3 text-sm text-red-600">{errorMessage}</p>
+          )}
+        </section>
+      )}
+
+      {adminToken && (
+        <>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Quote number
+            </span>
+            <input
+              type="search"
+              value={quoteNumberSearch}
+              onChange={(event) => {
+                setQuoteNumberSearch(event.target.value);
+                setPage(1);
+              }}
+              placeholder="QT-..."
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">
               Search customer
@@ -106,7 +202,10 @@ function QuoteHistoryPage() {
             <input
               type="search"
               value={customerSearch}
-              onChange={(event) => setCustomerSearch(event.target.value)}
+              onChange={(event) => {
+                setCustomerSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Name, for example John Smith"
               className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
@@ -119,9 +218,42 @@ function QuoteHistoryPage() {
             <input
               type="search"
               value={vehicleSearch}
-              onChange={(event) => setVehicleSearch(event.target.value)}
+              onChange={(event) => {
+                setVehicleSearch(event.target.value);
+                setPage(1);
+              }}
               placeholder="Year, make, or model"
               className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              From date
+            </span>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(event) => {
+                setDateFrom(event.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              To date
+            </span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(event) => {
+                setDateTo(event.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
           </label>
         </div>
@@ -149,22 +281,24 @@ function QuoteHistoryPage() {
         </section>
       )}
 
-      {!isLoading && !errorMessage && filteredQuotes.length === 0 && (
+      {!isLoading && !errorMessage && quotes.length === 0 && (
         <section className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
           <h2 className="text-lg font-semibold text-slate-900">
-            {quotes.length === 0 ? "No saved quotes yet" : "No quotes found"}
+            {pagination.total === 0 && !hasFilters
+              ? "No saved quotes yet"
+              : "No quotes found"}
           </h2>
           <p className="mt-2 text-slate-500">
-            {quotes.length === 0
+            {pagination.total === 0 && !hasFilters
               ? "Save a quote from the Create Quote page and it will appear here."
               : "Try a different customer or vehicle search."}
           </p>
         </section>
       )}
 
-      {!isLoading && !errorMessage && filteredQuotes.length > 0 && (
+      {!isLoading && !errorMessage && quotes.length > 0 && (
         <section className="grid gap-4 xl:grid-cols-2">
-          {filteredQuotes.map((quote) => {
+          {quotes.map((quote) => {
             const vehicle = formatVehicle(quote.vehicle);
 
             return (
@@ -174,6 +308,9 @@ function QuoteHistoryPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      {quote.quoteNumber || "Legacy quote"}
+                    </p>
                     <h2 className="text-lg font-bold text-slate-950">
                       {quote.customerName || "Walk-in Customer"}
                     </h2>
@@ -198,8 +335,10 @@ function QuoteHistoryPage() {
 
                 <div className="mt-5 border-t border-slate-200 pt-4">
                   <p className="mb-3 text-sm font-semibold text-slate-700">
-                    {quote.items.length} quote item
-                    {quote.items.length === 1 ? "" : "s"}
+                    {quote.items.length + (quote.laborItems?.length || 0)} quote item
+                    {quote.items.length + (quote.laborItems?.length || 0) === 1
+                      ? ""
+                      : "s"}
                   </p>
 
                   <div className="space-y-2">
@@ -216,12 +355,59 @@ function QuoteHistoryPage() {
                         </span>
                       </div>
                     ))}
+                    {(quote.laborItems || []).map((item) => (
+                      <div
+                        key={item._id || `${quote._id}-${item.description}`}
+                        className="flex items-center justify-between gap-4 text-sm"
+                      >
+                        <span className="text-slate-600">
+                          Labor: {item.description} × {item.hours} hr
+                        </span>
+                        <span className="font-medium text-slate-900">
+                          {formatCurrency(item.total)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
+                  <Link
+                    to={`/quotes/${quote._id}`}
+                    className="mt-4 inline-flex text-sm font-semibold text-blue-600 hover:text-blue-700"
+                  >
+                    Open quote details →
+                  </Link>
                 </div>
               </article>
             );
           })}
         </section>
+      )}
+
+      {!isLoading && !errorMessage && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-center gap-4">
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(1, current - 1))}
+            disabled={page <= 1}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-medium disabled:opacity-40"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-slate-600">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() =>
+              setPage((current) => Math.min(pagination.totalPages, current + 1))
+            }
+            disabled={page >= pagination.totalPages}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2 font-medium disabled:opacity-40"
+          >
+            Next
+          </button>
+        </div>
+      )}
+        </>
       )}
     </div>
   );

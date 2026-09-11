@@ -5,7 +5,7 @@ node_modules/
 .env
 
 #mac
-.Ds_Store
+.DS_Store
 
 #build
 dist/
