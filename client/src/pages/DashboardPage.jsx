@@ -4,6 +4,8 @@ import PartForm from "../components/admin/PartForm";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
 import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
+import QuickServices from "../components/services/QuickServices";
+import { QUICK_SERVICES } from "../data/quickServices";
 import {
   createPart,
   deletePart,
@@ -22,8 +24,11 @@ import {
   logoutAdmin,
   verifyAdminSession,
 } from "../services/authService";
+import { applyQuickService } from "../utils/applyQuickService";
 
 function DashboardPage() {
+  // Inventory administration state is kept separate from quote-building state
+  // so an admin edit cannot accidentally alter the active customer quote.
   const [parts, setParts] = useState([]);
   const [formData, setFormData] = useState({
     name: "",
@@ -38,11 +43,17 @@ function DashboardPage() {
   const [quoteError, setQuoteError] = useState("");
   const [vehicleError, setVehicleError] = useState("");
   const [editingPartId, setEditingPartId] = useState(null);
+
+  // The active quote contains inventory parts and independent labor lines.
+  // savedQuoteNumber also prevents accidentally saving the same draft twice.
   const [quoteItems, setQuoteItems] = useState([]);
   const [laborItems, setLaborItems] = useState([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
+  const [quickServiceMessage, setQuickServiceMessage] = useState(null);
+
+  // Customer and vehicle selections are stored with each saved quote.
   const [customerName, setCustomerName] = useState("");
   const currentYear = new Date().getFullYear();
   const [vehicle, setVehicle] = useState({
@@ -53,8 +64,8 @@ function DashboardPage() {
 
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
-  
 
+  // Load the current inventory once when the dashboard opens.
   const loadParts = () =>
     getParts()
       .then((data) => setParts(data))
@@ -63,6 +74,7 @@ function DashboardPage() {
         setInventoryError("Unable to load parts inventory.");
       });
 
+  // Manual part additions enforce the available stock shown in inventory.
   const addToQuote = (part) => {
     if (Number(part.quantity) <= 0) {
       setQuoteError(`${part.name} is out of stock.`);
@@ -93,6 +105,8 @@ function DashboardPage() {
 
   const totals = calculateQuoteTotals({ quoteItems, laborItems });
 
+  // Any quote change clears the saved marker, making the updated draft
+  // eligible to be saved again as a new quote.
   const removeFromQuote = (id) => {
     setQuoteItems((prevItems) => prevItems.filter((item) => item._id !== id));
     setSaveMessage("");
@@ -155,6 +169,39 @@ function DashboardPage() {
     setSavedQuoteNumber("");
   };
 
+  // Apply a common service as one atomic state update. Missing inventory parts
+  // are reported to the user while the labor portion is still added.
+  const handleQuickService = (service) => {
+    const result = applyQuickService({
+      service,
+      parts,
+      quoteItems,
+      laborItems,
+    });
+
+    setQuoteItems(result.quoteItems);
+    setLaborItems(result.laborItems);
+    setQuoteError("");
+    setSaveMessage("");
+    setSavedQuoteNumber("");
+
+    if (result.missingParts.length > 0) {
+      setQuickServiceMessage({
+        type: "warning",
+        text: `${service.name} labor was added. Missing or unavailable inventory: ${result.missingParts.join(
+          ", "
+        )}.`,
+      });
+    } else {
+      setQuickServiceMessage({
+        type: "success",
+        text: `${service.name} was added to the current quote.`,
+      });
+    }
+  };
+
+  // PDF code is loaded only when requested, keeping the initial app bundle
+  // smaller and the dashboard faster to open.
   const generatePDF = async () => {
     try {
       const { generateQuotePDF } = await import("../utils/generateQuotePDF");
@@ -197,6 +244,8 @@ function DashboardPage() {
     });
   };
 
+  // The backend verifies the password and returns a temporary session token;
+  // the password itself is never saved in browser storage.
   const handleAdminLogin = async (e) => {
     e.preventDefault();
 
@@ -286,6 +335,8 @@ function DashboardPage() {
     setInventoryError("");
   };
 
+  // Vehicle dropdowns are dependent: changing Year clears Make and Model,
+  // while changing Make clears Model before requesting fresh API results.
   const handleYearChange = async (e) => {
     const selectedYear = e.target.value;
 
@@ -313,7 +364,6 @@ function DashboardPage() {
       setVehicleError(error.message || "Unable to load vehicle makes.");
     }
   };
-  
   const handleMakeChange = async (e) => {
     const selectedMake = e.target.value;
 
@@ -339,7 +389,6 @@ function DashboardPage() {
       setVehicleError(error.message || "Unable to load vehicle models.");
     }
   };
-  
   const handleModelChange = (e) => {
     setVehicle({
       ...vehicle,
@@ -349,10 +398,8 @@ function DashboardPage() {
     setSavedQuoteNumber("");
   };
 
-
-
-
-  //保存当前报价
+  // Save sends raw quote inputs; the server independently validates inventory
+  // and calculates the authoritative parts, labor, tax, and grand totals.
   const saveQuote = async () => {
     if (quoteItems.length === 0 && laborItems.length === 0) {
       setQuoteError("Add at least one part or labor item.");
@@ -392,8 +439,6 @@ function DashboardPage() {
     { length: currentYear - 1990 + 1 },
     (_, index) => currentYear - index
   );
-
-
   return (
     <div>
       <header className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -444,6 +489,12 @@ function DashboardPage() {
         onYearChange={handleYearChange}
         vehicle={vehicle}
         years={years}
+      />
+
+      <QuickServices
+        message={quickServiceMessage}
+        onApply={handleQuickService}
+        services={QUICK_SERVICES}
       />
 
       {!isAdmin && (
