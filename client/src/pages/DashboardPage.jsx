@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import AdminAccess from "../components/admin/AdminAccess";
 import PartForm from "../components/admin/PartForm";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
@@ -21,6 +22,9 @@ import {
 import { filterCatalogItems } from "../utils/catalogSearch";
 
 function DashboardPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const quotePrefill = location.state?.quotePrefill;
   // Authentication stays at page level because it controls both inventory
   // administration and the visual mode shown in the dashboard header.
   const [adminToken, setAdminToken] = useState(getStoredAdminToken);
@@ -28,12 +32,15 @@ function DashboardPage() {
   const [adminPassword, setAdminPassword] = useState("");
   const [adminError, setAdminError] = useState("");
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
+    Boolean(quotePrefill)
+  );
 
   const favoriteJobs = useFavoriteJobs();
   const business = useBusinessSettings();
   const partsManager = useParts(adminToken);
   const quote = useQuote(partsManager.parts, business.settings.taxRate);
-  const vehicleForm = useVehicle(quote.markDraftChanged);
+  const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
 
   const matchingPartCount = filterCatalogItems(
     partsManager.parts,
@@ -50,6 +57,14 @@ function DashboardPage() {
     localStorage.removeItem("isAdmin");
     localStorage.removeItem("adminPassword");
   }, []);
+
+  useEffect(() => {
+    if (!quotePrefill) return;
+
+    // useVehicle has already captured the selected record. Remove its private
+    // details from browser history while keeping the visible form populated.
+    navigate("/", { replace: true, state: null });
+  }, [navigate, quotePrefill]);
 
   useEffect(() => {
     if (!adminToken) return;
@@ -130,6 +145,22 @@ function DashboardPage() {
         <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {business.settingsError}
         </p>
+      )}
+
+      {showPrefillNotice && (
+        <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:flex-row sm:items-center sm:justify-between">
+          <span>
+            Returning customer loaded. Review the details before saving the
+            quote.
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowPrefillNotice(false)}
+            className="self-start font-semibold text-emerald-900 hover:underline sm:self-auto"
+          >
+            Dismiss
+          </button>
+        </div>
       )}
 
       <CustomerVehicleCard

@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AdminAccess from "../components/admin/AdminAccess";
 import { getStoredAdminToken, loginAdmin } from "../services/authService";
 import { getCustomers } from "../services/customersService";
+import { createQuotePrefill } from "../utils/customerPrefill";
 
 function vehicleName(vehicle) {
   return [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" ");
 }
 
 function CustomersPage() {
+  const navigate = useNavigate();
   const [adminToken, setAdminToken] = useState(getStoredAdminToken);
   const [adminPassword, setAdminPassword] = useState("");
   const [search, setSearch] = useState("");
@@ -63,6 +66,14 @@ function CustomersPage() {
     } catch (error) {
       setErrorMessage(error.message);
     }
+  };
+
+  // React Router carries the selected record to the dashboard without placing
+  // private customer information in the URL.
+  const startQuote = (customer, vehicle) => {
+    navigate("/", {
+      state: { quotePrefill: createQuotePrefill(customer, vehicle) },
+    });
   };
 
   return (
@@ -134,34 +145,62 @@ function CustomersPage() {
                           .join(" • ") || "No contact information"}
                       </p>
                     </div>
-                    <p className="text-xs text-slate-500">
-                      Last visit: {customer.lastVisitAt
-                        ? new Date(customer.lastVisitAt).toLocaleDateString()
-                        : "Unknown"}
-                    </p>
+                    <div className="flex flex-col items-start gap-2 sm:items-end">
+                      <p className="text-xs text-slate-500">
+                        Last visit: {customer.lastVisitAt
+                          ? new Date(customer.lastVisitAt).toLocaleDateString()
+                          : "Unknown"}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => startQuote(customer)}
+                        className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
+                      >
+                        Use customer only
+                      </button>
+                    </div>
                   </div>
 
                   <div className="mt-4 space-y-2">
-                    {customer.vehicles.map((vehicle) => (
-                      <div
-                        key={vehicle._id}
-                        className="rounded-xl bg-slate-50 px-4 py-3"
-                      >
-                        <p className="font-semibold text-slate-800">
-                          {vehicleName(vehicle) || "Vehicle details unavailable"}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                          {[
-                            vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`,
-                            vehicle.vin && `VIN: ${vehicle.vin}`,
-                            vehicle.mileage != null &&
-                              `Mileage: ${Number(vehicle.mileage).toLocaleString()}`,
-                          ]
-                            .filter(Boolean)
-                            .join(" • ") || "No identifiers saved"}
-                        </p>
-                      </div>
-                    ))}
+                    {customer.vehicles.length === 0 ? (
+                      <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                        No saved vehicles for this customer.
+                      </p>
+                    ) : (
+                      customer.vehicles.map((vehicle) => (
+                        <div
+                          key={vehicle._id}
+                          className="flex flex-col gap-3 rounded-xl bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                        >
+                          <div>
+                            <p className="font-semibold text-slate-800">
+                              {vehicleName(vehicle) ||
+                                "Vehicle details unavailable"}
+                            </p>
+                            <p className="mt-1 text-xs text-slate-500">
+                              {[
+                                vehicle.licensePlate &&
+                                  `Plate: ${vehicle.licensePlate}`,
+                                vehicle.vin && `VIN: ${vehicle.vin}`,
+                                vehicle.mileage != null &&
+                                  `Mileage: ${Number(
+                                    vehicle.mileage
+                                  ).toLocaleString()}`,
+                              ]
+                                .filter(Boolean)
+                                .join(" • ") || "No identifiers saved"}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => startQuote(customer, vehicle)}
+                            className="shrink-0 rounded-lg bg-blue-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-blue-700"
+                          >
+                            Use for new quote
+                          </button>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </article>
               ))}
