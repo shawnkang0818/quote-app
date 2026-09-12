@@ -5,6 +5,7 @@ import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
 import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
 import QuickServices from "../components/services/QuickServices";
+import PartsServicesSearch from "../components/search/PartsServicesSearch";
 import { QUICK_SERVICES } from "../data/quickServices";
 import {
   createPart,
@@ -26,6 +27,7 @@ import {
 } from "../services/authService";
 import { applyQuickService } from "../utils/applyQuickService";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
+import { filterCatalogItems } from "../utils/catalogSearch";
 
 // Shared validation protects both saved quotes and generated PDFs from
 // incomplete labor edits.
@@ -48,6 +50,7 @@ function DashboardPage() {
   // Inventory administration state is kept separate from quote-building state
   // so an admin edit cannot accidentally alter the active customer quote.
   const [parts, setParts] = useState([]);
+  const [catalogSearch, setCatalogSearch] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -82,6 +85,12 @@ function DashboardPage() {
 
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
+
+  const matchingPartCount = filterCatalogItems(parts, catalogSearch).length;
+  const matchingServiceCount = filterCatalogItems(
+    QUICK_SERVICES,
+    catalogSearch
+  ).length;
 
   // Load the current inventory once when the dashboard opens.
   const loadParts = () =>
@@ -531,11 +540,20 @@ function DashboardPage() {
         years={years}
       />
 
+      <PartsServicesSearch
+        partCount={matchingPartCount}
+        query={catalogSearch}
+        serviceCount={matchingServiceCount}
+        onChange={(event) => setCatalogSearch(event.target.value)}
+        onClear={() => setCatalogSearch("")}
+      />
+
       <QuickServices
         favoriteServiceIds={favoriteServiceIds}
         message={quickServiceMessage}
         onApply={handleQuickService}
         onToggleFavorite={toggleFavorite}
+        searchQuery={catalogSearch}
         services={QUICK_SERVICES}
       />
 
@@ -569,6 +587,7 @@ function DashboardPage() {
           onDelete={handleDelete}
           onEdit={handleEdit}
           parts={parts}
+          searchQuery={catalogSearch}
         />
 
         <QuoteBuilder

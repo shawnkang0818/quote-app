@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { filterCatalogItems } from "../../utils/catalogSearch";
 
 function PartsTable({
   errorMessage,
@@ -7,19 +8,14 @@ function PartsTable({
   onDelete,
   onEdit,
   parts,
+  searchQuery,
 }) {
-  const [searchQuery, setSearchQuery] = useState("");
-
   // Filtering remains client-side for now because the inventory is small.
   // It can move to a paginated API later without changing the table UI.
-  const filteredParts = useMemo(() => {
-    const normalizedQuery = searchQuery.trim().toLowerCase();
-    if (!normalizedQuery) return parts;
-
-    return parts.filter((part) =>
-      part.name.toLowerCase().includes(normalizedQuery)
-    );
-  }, [parts, searchQuery]);
+  const filteredParts = useMemo(
+    () => filterCatalogItems(parts, searchQuery),
+    [parts, searchQuery]
+  );
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -45,30 +41,6 @@ function PartsTable({
           {errorMessage}
         </p>
       )}
-
-      <label className="mb-5 block">
-        <span className="mb-2 block text-sm font-medium text-slate-700">
-          Search parts
-        </span>
-        <div className="flex gap-2">
-          <input
-            type="search"
-            value={searchQuery}
-            onChange={(event) => setSearchQuery(event.target.value)}
-            placeholder="Search by part name"
-            className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-          />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="rounded-xl bg-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-300"
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      </label>
 
       {parts.length === 0 ? (
         <div className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
