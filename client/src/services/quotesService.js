@@ -6,6 +6,9 @@ function adminHeaders(token) {
 
 export async function getQuotes(filters = {}, token) {
   const query = new URLSearchParams();
+
+  // Omit empty filters so the API can distinguish an unfiltered history query
+  // from a request that intentionally supplies a search value.
   Object.entries(filters).forEach(([key, value]) => {
     if (value !== "" && value !== undefined && value !== null) {
       query.set(key, value);
@@ -17,6 +20,8 @@ export async function getQuotes(filters = {}, token) {
 }
 
 export async function createQuote(quote) {
+  // Creating a quote remains available in normal shop mode; reading stored
+  // customer history is the restricted operation and requires an admin token.
   return apiRequest("/quotes", {
     method: "POST",
     headers: {

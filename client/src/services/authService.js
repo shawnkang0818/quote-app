@@ -22,5 +22,7 @@ export function verifyAdminSession(token) {
 }
 
 export function getStoredAdminToken() {
+  // Session storage intentionally signs the administrator out when the
+  // browser tab closes and avoids persisting the original password anywhere.
   return sessionStorage.getItem("adminToken") || "";
 }

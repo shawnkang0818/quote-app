@@ -20,6 +20,8 @@ dotenv.config();
 
 const app = express();
 
+// Production deployments can provide their own comma-separated frontend
+// origins while local development remains available on localhost.
 const allowedOrigins = (
   process.env.CLIENT_ORIGINS ||
   "http://localhost:5173,http://127.0.0.1:5173"
@@ -31,12 +33,16 @@ app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "100kb" }));
 
 function sendDatabaseError(res, error) {
+  // Validation and malformed IDs are client errors; unexpected database
+  // failures remain server errors without duplicating this mapping per route.
   const status = error?.status ||
     (error?.name === "ValidationError" || error?.name === "CastError" ? 400 : 500);
   return res.status(status).json({ error: error.message });
 }
 
 async function fetchJsonWithTimeout(url, timeoutMs = 10000) {
+  // NHTSA is an external dependency. Abort slow requests so our API can return
+  // a useful timeout instead of leaving the frontend request open indefinitely.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -127,7 +133,8 @@ app.delete("/api/parts/:id", adminAuth, async (req, res) => {
 
 const PORT = process.env.PORT || 5001;
 
-// Get vehicle makes by year
+// Proxy vehicle makes through our server so provider details and timeout
+// behavior stay out of the React application.
 app.get("/api/vehicles/makes", async (req, res) => {
   try {
     const { year } = req.query;
@@ -147,7 +154,8 @@ app.get("/api/vehicles/makes", async (req, res) => {
   }
 });
 
-// Get vehicle models by year and make
+// Models depend on both selected year and make; URL encoding also supports
+// manufacturers whose names contain spaces or punctuation.
 app.get("/api/vehicles/models", async (req, res) => {
   try {
     const { year, make } = req.query;
@@ -169,7 +177,8 @@ app.get("/api/vehicles/models", async (req, res) => {
   }
 });
 
-//添加保存报价 API
+// Save an immutable quote snapshot using current inventory data. Client-sent
+// part names, prices, totals, and tax are never treated as authoritative.
 app.post("/api/quotes", async (req, res) => {
   try {
     const items = Array.isArray(req.body.items) ? req.body.items : [];
@@ -190,6 +199,8 @@ app.post("/api/quotes", async (req, res) => {
       });
     }
 
+    // Re-read every selected part to enforce current price, identity, and
+    // available stock even if a caller bypasses or modifies the frontend.
     const cleanItems = await Promise.all(
       items.map(async (item) => {
         const part = await Part.findById(item.partId);
@@ -252,7 +263,8 @@ app.post("/api/quotes", async (req, res) => {
   }
 });
 
-//获取历史报价
+// Quote history is restricted because it contains customer information. All
+// filtering and pagination happen in MongoDB instead of loading every record.
 app.get("/api/quotes", adminAuth, async (req, res) => {
   try {
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
@@ -263,6 +275,8 @@ app.get("/api/quotes", adminAuth, async (req, res) => {
     const query = {};
 
     if (req.query.quoteNumber) {
+      // Escape user input before using it as a regular expression so symbols
+      // are searched literally instead of changing the query pattern.
       query.quoteNumber = {
         $regex: String(req.query.quoteNumber).replace(
           /[.*+?^\${}()|[\]\\]/g,
@@ -298,6 +312,8 @@ app.get("/api/quotes", adminAuth, async (req, res) => {
       }
     }
 
+    // Fetch the page and its total count together to reduce response time.
+    // The hard limit above prevents oversized history responses.
     const [quotes, total] = await Promise.all([
       Quote.find(query)
         .sort({ createdAt: -1 })
@@ -335,6 +351,8 @@ async function startServer() {
   if (!process.env.MONGO_URI) {
     throw new Error("MONGO_URI is not configured");
   }
+  // Begin listening only after MongoDB is reachable; otherwise the API would
+  // appear healthy while every database-backed request fails.
   await mongoose.connect(process.env.MONGO_URI, {
     serverSelectionTimeoutMS: 10000,
   });

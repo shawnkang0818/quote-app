@@ -16,6 +16,8 @@ function QuoteDetailPage() {
   const [quote, setQuote] = useState(null);
   const [error, setError] = useState("");
 
+  // Quote details contain customer information, so this page does not issue
+  // a request unless an admin session already exists in the current tab.
   useEffect(() => {
     if (!adminToken) return;
 
@@ -57,6 +59,8 @@ function QuoteDetailPage() {
   ]
     .filter(Boolean)
     .join(" ");
+  // Older quotes may predate the stored summary fields. Recalculate only the
+  // missing values so legacy records remain readable after the migration.
   const partsSubtotal =
     quote.partsSubtotal ??
     quote.items.reduce(
@@ -71,6 +75,7 @@ function QuoteDetailPage() {
     );
 
   const handleGeneratePDF = async () => {
+    // jsPDF is relatively large, so load it only when a user requests a PDF.
     const { generateQuotePDF } = await import("../utils/generateQuotePDF");
     generateQuotePDF({
       customerName: quote.customerName,

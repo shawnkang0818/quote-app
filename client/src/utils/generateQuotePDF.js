@@ -2,6 +2,8 @@ import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 import { calculateQuoteTotals } from "./calculateQuoteTotals";
 
+// Company details are centralized here so the PDF header can later be moved
+// to a Settings page without changing the document layout code.
 const COMPANY = {
   name: "Auto Parts Quote System",
   address: "Brooklyn, NY",
@@ -20,6 +22,8 @@ export function generateQuotePDF({
   }
 
   const doc = new jsPDF();
+  // A saved quote keeps its permanent number. Unsaved previews are clearly
+  // marked as drafts so they cannot be mistaken for stored records.
   const quoteNumber = savedQuoteNumber || `DRAFT-${Date.now()}`;
   const today = new Date().toLocaleDateString();
   const displayCustomerName = customerName || "Walk-in Customer";
@@ -57,6 +61,8 @@ export function generateQuotePDF({
   doc.setFont("helvetica", "normal");
   doc.text(vehicleText || "Not specified", 14, 68);
 
+  // Parts and labor share one client-facing table, while their separate source
+  // arrays are preserved for accurate subtotal calculations and history data.
   const tableBody = quoteItems.map((item, index) => [
     index + 1,
     item.name,

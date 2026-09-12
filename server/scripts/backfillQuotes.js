@@ -11,6 +11,9 @@ dotenv.config();
 
 async function backfillQuotes() {
   await mongoose.connect(process.env.MONGO_URI);
+
+  // This selector makes the migration safe to rerun: quotes already carrying
+  // the new identity and summary fields are left unchanged.
   const quotes = await Quote.find({
     $or: [
       { quoteNumber: { $exists: false } },
@@ -31,6 +34,8 @@ async function backfillQuotes() {
       taxRate: quote.taxRate ?? DEFAULT_TAX_RATE,
     });
 
+    // Legacy timestamps and the final ObjectId characters produce a readable,
+    // stable quote number instead of generating a different value on each run.
     quote.quoteNumber =
       quote.quoteNumber ||
       `QT-${new Date(quote.createdAt).getTime()}-${quote._id
@@ -48,6 +53,9 @@ async function backfillQuotes() {
   }
 
   console.log(`Updated ${quotes.length} legacy quote(s)`);
+
+  // Scripts exit more reliably when their database connection is explicitly
+  // closed after all writes finish.
   await mongoose.disconnect();
 }
 

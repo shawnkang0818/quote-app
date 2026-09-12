@@ -34,6 +34,8 @@ function QuoteHistoryPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
+  // History filtering is performed by the server because the complete quote
+  // collection may be much larger than the ten records shown on this page.
   useEffect(() => {
     let ignore = false;
 
@@ -43,6 +45,9 @@ function QuoteHistoryPage() {
     }
 
     setIsLoading(true);
+
+    // Delay requests briefly while the user types so a search does not send
+    // a new database query for every individual keystroke.
     const timer = setTimeout(async () => {
       try {
         const data = await getQuotes(
@@ -58,6 +63,8 @@ function QuoteHistoryPage() {
           adminToken
         );
 
+        // A newer search may finish before an older one. Ignore the older
+        // response after this effect has been cleaned up.
         if (!ignore) {
           setQuotes(data.quotes);
           setPagination(data.pagination);
@@ -67,6 +74,8 @@ function QuoteHistoryPage() {
         console.error(error);
 
         if (!ignore) {
+          // Remove an expired session immediately so restricted customer data
+          // is hidden until the administrator signs in again.
           if (error.status === 401) {
             sessionStorage.removeItem("adminToken");
             setAdminToken("");
