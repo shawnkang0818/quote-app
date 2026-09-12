@@ -91,6 +91,7 @@ function QuoteDetailPage() {
       customer: quote.customer,
       customerName: quote.customerName,
       laborItems: quote.laborItems || [],
+      notes: quote.notes || {},
       quoteItems: quote.items,
       quoteNumber: quote.quoteNumber,
       quoteDate: quote.createdAt,
@@ -256,6 +257,27 @@ function QuoteDetailPage() {
           </p>
         </div>
       </section>
+
+      {(quote.notes?.customerRequest || quote.notes?.technicianNotes) && (
+        <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+              Customer Request
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+              {quote.notes.customerRequest || "No customer request recorded."}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-600">
+              Technician Notes
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+              {quote.notes.technicianNotes || "No technician notes recorded."}
+            </p>
+          </div>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-semibold text-slate-950">Quote items</h2>

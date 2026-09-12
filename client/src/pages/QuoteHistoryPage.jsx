@@ -380,6 +380,17 @@ function QuoteHistoryPage() {
                   </p>
                 </div>
 
+                {quote.notes?.customerRequest && (
+                  <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/60 px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                      Customer request
+                    </p>
+                    <p className="mt-1 line-clamp-2 text-sm text-slate-700">
+                      {quote.notes.customerRequest}
+                    </p>
+                  </div>
+                )}
+
                 <div className="mt-5 border-t border-slate-200 pt-4">
                   <p className="mb-3 text-sm font-semibold text-slate-700">
                     {quote.items.length + (quote.laborItems?.length || 0)} quote item

@@ -1,13 +1,16 @@
 import LaborSection from "./LaborSection";
+import QuoteNotes from "./QuoteNotes";
 
 function QuoteBuilder({
   defaultHourlyRate,
   laborItems,
+  notes,
   onAddLabor,
   onDecreaseQuantity,
   onIncreaseQuantity,
   onRemove,
   onRemoveLabor,
+  onUpdateNote,
   onUpdateLabor,
   quoteItems,
 }) {
@@ -100,6 +103,8 @@ function QuoteBuilder({
         onRemove={onRemoveLabor}
         onUpdate={onUpdateLabor}
       />
+
+      <QuoteNotes notes={notes} onChange={onUpdateNote} />
     </section>
   );
 }

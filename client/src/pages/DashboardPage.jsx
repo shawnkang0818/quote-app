@@ -140,11 +140,13 @@ function DashboardPage() {
         <QuoteBuilder
           defaultHourlyRate={business.settings.defaultHourlyRate}
           laborItems={quote.laborItems}
+          notes={quote.notes}
           onAddLabor={quote.addLabor}
           onDecreaseQuantity={quote.decreaseQuantity}
           onIncreaseQuantity={quote.increaseQuantity}
           onRemove={quote.removePart}
           onRemoveLabor={quote.removeLabor}
+          onUpdateNote={quote.updateNote}
           onUpdateLabor={quote.updateLabor}
           quoteItems={quote.quoteItems}
         />

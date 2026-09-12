@@ -24,6 +24,10 @@ export function useQuote(parts, taxRate) {
   const [saveMessage, setSaveMessage] = useState("");
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
   const [quickServiceMessage, setQuickServiceMessage] = useState(null);
+  const [notes, setNotes] = useState({
+    customerRequest: "",
+    technicianNotes: "",
+  });
 
   const totals = calculateQuoteTotals({ quoteItems, laborItems, taxRate });
 
@@ -130,6 +134,12 @@ export function useQuote(parts, taxRate) {
     markDraftChanged();
   };
 
+  const updateNote = (event) => {
+    const { name, value } = event.target;
+    setNotes((current) => ({ ...current, [name]: value }));
+    markDraftChanged();
+  };
+
   const applyService = (service) => {
     const result = applyQuickService({
       service,
@@ -163,6 +173,7 @@ export function useQuote(parts, taxRate) {
     setLaborItems([]);
     setQuoteError("");
     setQuickServiceMessage(null);
+    setNotes({ customerRequest: "", technicianNotes: "" });
     markDraftChanged();
   };
 
@@ -180,6 +191,7 @@ export function useQuote(parts, taxRate) {
         customerName: customer.name,
         businessSettings,
         laborItems,
+        notes,
         quoteItems,
         quoteNumber: savedQuoteNumber,
         vehicle,
@@ -222,6 +234,7 @@ export function useQuote(parts, taxRate) {
           hours,
           hourlyRate,
         })),
+        notes,
       });
 
       setQuoteError("");
@@ -246,6 +259,7 @@ export function useQuote(parts, taxRate) {
     isSaving,
     laborItems,
     markDraftChanged,
+    notes,
     quickServiceMessage,
     quoteError,
     quoteItems,
@@ -255,6 +269,7 @@ export function useQuote(parts, taxRate) {
     saveQuote,
     savedQuoteNumber,
     totals,
+    updateNote,
     updateLabor,
   };
 }

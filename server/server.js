@@ -35,6 +35,7 @@ import {
   normalizeQuickService,
   slugifyServiceName,
 } from "./utils/quickServices.js";
+import { normalizeQuoteNotes } from "./utils/quoteNotes.js";
 
 dotenv.config();
 
@@ -402,6 +403,7 @@ async function buildQuoteSnapshot(payload) {
   const businessSettings = await getBusinessSettings();
   const customer = normalizeCustomer(payload.customer, payload.customerName);
   const vehicle = normalizeVehicle(payload.vehicle);
+  const notes = normalizeQuoteNotes(payload.notes);
   const totals = calculateQuoteTotals({
     items: cleanItems,
     laborItems: cleanLaborItems,
@@ -414,6 +416,7 @@ async function buildQuoteSnapshot(payload) {
     customerName: customer.name,
     customer,
     vehicle,
+    notes,
     business: createBusinessSnapshot(businessSettings),
     items: cleanItems,
     laborItems: cleanLaborItems,
@@ -600,6 +603,7 @@ app.post("/api/quotes/:id/duplicate", adminAuth, async (req, res) => {
       // duplicated. Legacy quotes still fall back to customerName.
       customer: source.customer,
       vehicle: source.vehicle,
+      notes: source.notes,
       items: source.items.map((item) => ({
         partId: item.partId,
         quoteQuantity: item.quoteQuantity,

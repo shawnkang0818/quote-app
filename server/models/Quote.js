@@ -33,6 +33,20 @@ const quoteSchema = new mongoose.Schema(
       licensePlate: String,
       mileage: Number,
     },
+    notes: {
+      customerRequest: {
+        type: String,
+        trim: true,
+        maxlength: 1000,
+        default: "",
+      },
+      technicianNotes: {
+        type: String,
+        trim: true,
+        maxlength: 1000,
+        default: "",
+      },
+    },
     // Company details are copied at save time so historical PDFs remain
     // unchanged even when the shop later edits its Business Settings.
     business: {
