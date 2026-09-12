@@ -27,6 +27,7 @@ import {
 import {
   findMatchingVehicleIndex,
   normalizeCustomer,
+  normalizeCustomerRecord,
   normalizeEmail,
   normalizePhone,
   normalizeVehicle,
@@ -294,6 +295,60 @@ app.get("/api/customers", adminAuth, async (req, res) => {
       .sort({ lastVisitAt: -1, name: 1 })
       .limit(50);
     return res.json(customers);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+async function findCustomerContactConflict(customer, excludedId) {
+  const identities = [];
+  if (customer.phoneNormalized) {
+    identities.push({ phoneNormalized: customer.phoneNormalized });
+  }
+  if (customer.emailNormalized) {
+    identities.push({ emailNormalized: customer.emailNormalized });
+  }
+
+  const query = { $or: identities };
+  if (excludedId) query._id = { $ne: excludedId };
+  return Customer.findOne(query).select("name");
+}
+
+// Administrators may create customer records before the first quote is saved.
+app.post("/api/customers", adminAuth, async (req, res) => {
+  try {
+    const customer = normalizeCustomerRecord(req.body);
+    const conflict = await findCustomerContactConflict(customer);
+    if (conflict) {
+      return res.status(409).json({
+        message: `A customer named ${conflict.name} already uses this phone or email.`,
+      });
+    }
+    return res.status(201).json(await Customer.create(customer));
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Editing replaces the managed contact and vehicle fields while preserving
+// quote-derived visit dates and references stored on the customer document.
+app.put("/api/customers/:id", adminAuth, async (req, res) => {
+  try {
+    const customer = normalizeCustomerRecord(req.body);
+    const conflict = await findCustomerContactConflict(customer, req.params.id);
+    if (conflict) {
+      return res.status(409).json({
+        message: `A customer named ${conflict.name} already uses this phone or email.`,
+      });
+    }
+
+    const updated = await Customer.findByIdAndUpdate(
+      req.params.id,
+      { $set: customer },
+      { returnDocument: "after", runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Customer not found" });
+    return res.json(updated);
   } catch (error) {
     return sendDatabaseError(res, error);
   }

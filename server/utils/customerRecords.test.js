@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   findMatchingVehicleIndex,
   normalizeCustomer,
+  normalizeCustomerRecord,
   normalizePhone,
   normalizeVehicle,
 } from "./customerRecords.js";
@@ -35,4 +36,44 @@ test("matches returning vehicles by VIN before descriptive fields", () => {
     { vin: "VIN-1", year: "2021", make: "TOYOTA", model: "RAV4" }
   );
   assert.equal(index, 0);
+});
+
+test("normalizes an editable customer record and removes duplicate vehicles", () => {
+  assert.deepEqual(
+    normalizeCustomerRecord({
+      name: " Jane Doe ",
+      phone: "(310) 555-0100",
+      email: " JANE@EXAMPLE.COM ",
+      vehicles: [
+        { year: "2022", make: "Toyota", model: "Camry", vin: "abc" },
+        { year: "2023", make: "Toyota", model: "RAV4", vin: "ABC" },
+      ],
+    }),
+    {
+      name: "Jane Doe",
+      phone: "(310) 555-0100",
+      phoneNormalized: "3105550100",
+      email: "jane@example.com",
+      emailNormalized: "jane@example.com",
+      vehicles: [
+        {
+          year: "2023",
+          make: "Toyota",
+          model: "RAV4",
+          vin: "ABC",
+          licensePlate: "",
+          mileage: undefined,
+        },
+      ],
+    }
+  );
+});
+
+test("requires customer identity for a managed record", () => {
+  assert.throws(() => normalizeCustomerRecord({ name: "" }), {
+    message: "Customer name is required",
+  });
+  assert.throws(() => normalizeCustomerRecord({ name: "Walk-in" }), {
+    message: "Enter a phone number or email address",
+  });
 });

@@ -1,8 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AdminAccess from "../components/admin/AdminAccess";
+import CustomerForm from "../components/customer/CustomerForm";
 import { getStoredAdminToken, loginAdmin } from "../services/authService";
-import { getCustomers } from "../services/customersService";
+import {
+  createCustomer,
+  getCustomers,
+  updateCustomer,
+} from "../services/customersService";
 import { createQuotePrefill } from "../utils/customerPrefill";
 
 function vehicleName(vehicle) {
@@ -16,7 +21,11 @@ function CustomersPage() {
   const [search, setSearch] = useState("");
   const [customers, setCustomers] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSavingCustomer, setIsSavingCustomer] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [customerFormError, setCustomerFormError] = useState("");
+  const [editingCustomer, setEditingCustomer] = useState(undefined);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Debounced server search supports customer name, contact information, VIN,
   // plate, make, and model without downloading the complete customer database.
@@ -53,7 +62,7 @@ function CustomersPage() {
       ignore = true;
       clearTimeout(timer);
     };
-  }, [adminToken, search]);
+  }, [adminToken, refreshKey, search]);
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -76,18 +85,55 @@ function CustomersPage() {
     });
   };
 
+  const saveCustomer = async (customerData) => {
+    setIsSavingCustomer(true);
+    try {
+      if (editingCustomer?._id) {
+        await updateCustomer(editingCustomer._id, customerData, adminToken);
+      } else {
+        await createCustomer(customerData, adminToken);
+      }
+      setEditingCustomer(undefined);
+      setErrorMessage("");
+      setCustomerFormError("");
+      setRefreshKey((current) => current + 1);
+    } catch (error) {
+      if (error.status === 401) {
+        sessionStorage.removeItem("adminToken");
+        setAdminToken("");
+      }
+      setCustomerFormError(error.message || "Unable to save customer.");
+    } finally {
+      setIsSavingCustomer(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <header>
-        <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-          Customers
-        </p>
-        <h1 className="mt-2 text-3xl font-bold text-slate-950">
-          Customer Records
-        </h1>
-        <p className="mt-2 text-slate-500">
-          Find returning customers by name, contact, VIN, plate, or vehicle.
-        </p>
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
+            Customers
+          </p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-950">
+            Customer Records
+          </h1>
+          <p className="mt-2 text-slate-500">
+            Find returning customers by name, contact, VIN, plate, or vehicle.
+          </p>
+        </div>
+        {adminToken && editingCustomer === undefined && (
+          <button
+            type="button"
+            onClick={() => {
+              setEditingCustomer(null);
+              setCustomerFormError("");
+            }}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700"
+          >
+            + Add customer
+          </button>
+        )}
       </header>
 
       {!adminToken ? (
@@ -100,6 +146,20 @@ function CustomersPage() {
         />
       ) : (
         <>
+          {editingCustomer !== undefined && (
+            <CustomerForm
+              key={editingCustomer?._id || "new-customer"}
+              customer={editingCustomer}
+              errorMessage={customerFormError}
+              isSaving={isSavingCustomer}
+              onCancel={() => {
+                setEditingCustomer(undefined);
+                setCustomerFormError("");
+              }}
+              onSave={saveCustomer}
+            />
+          )}
+
           <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <label className="block text-sm font-medium text-slate-700">
               Search customer records
@@ -151,13 +211,25 @@ function CustomersPage() {
                           ? new Date(customer.lastVisitAt).toLocaleDateString()
                           : "Unknown"}
                       </p>
-                      <button
-                        type="button"
-                        onClick={() => startQuote(customer)}
-                        className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
-                      >
-                        Use customer only
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCustomer(customer);
+                            setCustomerFormError("");
+                          }}
+                          className="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => startQuote(customer)}
+                          className="rounded-lg border border-blue-200 px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50"
+                        >
+                          Use customer only
+                        </button>
+                      </div>
                     </div>
                   </div>
 

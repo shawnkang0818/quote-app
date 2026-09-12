@@ -26,6 +26,57 @@ export function normalizeVehicle(vehicle = {}) {
   };
 }
 
+// Customer-management writes use stricter rules than quote snapshots: a saved
+// record needs a real name and at least one stable contact method for matching.
+export function normalizeCustomerRecord(customer = {}) {
+  const name = String(customer.name || "").trim();
+  const phone = String(customer.phone || "").trim();
+  const email = normalizeEmail(customer.email);
+
+  if (!name) {
+    const error = new Error("Customer name is required");
+    error.status = 400;
+    throw error;
+  }
+  if (!phone && !email) {
+    const error = new Error("Enter a phone number or email address");
+    error.status = 400;
+    throw error;
+  }
+
+  const vehicles = [];
+  for (const rawVehicle of Array.isArray(customer.vehicles)
+    ? customer.vehicles
+    : []) {
+    const vehicle = normalizeVehicle(rawVehicle);
+    const hasIdentity = Boolean(
+      vehicle.year ||
+        vehicle.make ||
+        vehicle.model ||
+        vehicle.vin ||
+        vehicle.licensePlate
+    );
+    if (!hasIdentity) continue;
+
+    // Repeated VIN, plate, or Year/Make/Model rows collapse into one record.
+    const existingIndex = findMatchingVehicleIndex(vehicles, vehicle);
+    if (existingIndex >= 0) {
+      vehicles[existingIndex] = { ...vehicles[existingIndex], ...vehicle };
+    } else {
+      vehicles.push(vehicle);
+    }
+  }
+
+  return {
+    name,
+    phone,
+    phoneNormalized: normalizePhone(phone),
+    email,
+    emailNormalized: email,
+    vehicles,
+  };
+}
+
 // VIN and plate are strongest identifiers. Older vehicles without either use
 // their Year/Make/Model combination to avoid adding the same car repeatedly.
 export function findMatchingVehicleIndex(vehicles, candidate) {

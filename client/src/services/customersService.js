@@ -7,3 +7,25 @@ export function getCustomers(search, token) {
     headers: { Authorization: `Bearer ${token}` },
   });
 }
+
+export function createCustomer(customer, token) {
+  return apiRequest("/customers", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(customer),
+  });
+}
+
+export function updateCustomer(customerId, customer, token) {
+  return apiRequest(`/customers/${customerId}`, {
+    method: "PUT",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(customer),
+  });
+}
