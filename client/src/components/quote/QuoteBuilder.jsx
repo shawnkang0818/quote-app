@@ -13,6 +13,7 @@ function QuoteBuilder({
   onRemove,
   onRemoveLabor,
   onSaveQuote,
+  onUpdateLabor,
   quoteItems,
   saveMessage,
   totals,
@@ -90,6 +91,7 @@ function QuoteBuilder({
         laborItems={laborItems}
         onAdd={onAddLabor}
         onRemove={onRemoveLabor}
+        onUpdate={onUpdateLabor}
       />
 
       <div className="mt-6 border-t border-slate-200 pt-5">

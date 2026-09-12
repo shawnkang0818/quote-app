@@ -6,17 +6,20 @@ const EMPTY_LABOR = {
   hourlyRate: "",
 };
 
-function LaborSection({ laborItems, onAdd, onRemove }) {
+function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
   const [labor, setLabor] = useState(EMPTY_LABOR);
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onAdd({
+    const wasAdded = onAdd({
       description: labor.description.trim(),
       hours: Number(labor.hours),
       hourlyRate: Number(labor.hourlyRate),
     });
-    setLabor(EMPTY_LABOR);
+    // Keep invalid input visible so the user can correct it.
+    if (wasAdded !== false) {
+      setLabor(EMPTY_LABOR);
+    }
   };
 
   return (
@@ -78,21 +81,53 @@ function LaborSection({ laborItems, onAdd, onRemove }) {
           {laborItems.map((item) => (
             <div
               key={item.id}
-              className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"
+              className="rounded-xl bg-slate-50 p-3 text-sm"
             >
-              <div>
+              <div className="flex items-start justify-between gap-3">
                 <p className="font-medium text-slate-800">{item.description}</p>
-                <p className="text-slate-500">
-                  {item.hours} hr × ${Number(item.hourlyRate).toFixed(2)}
-                </p>
+                <button
+                  type="button"
+                  onClick={() => onRemove(item.id)}
+                  className="font-medium text-red-600 hover:text-red-700"
+                >
+                  Remove
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => onRemove(item.id)}
-                className="font-medium text-red-600 hover:text-red-700"
-              >
-                Remove
-              </button>
+
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <label className="text-xs font-medium text-slate-500">
+                  Hours
+                  <input
+                    type="number"
+                    value={item.hours}
+                    onChange={(event) =>
+                      onUpdate(item.id, { hours: event.target.value })
+                    }
+                    min="0.1"
+                    step="0.1"
+                    aria-label={`${item.description} labor hours`}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="text-xs font-medium text-slate-500">
+                  Hourly Rate ($)
+                  <input
+                    type="number"
+                    value={item.hourlyRate}
+                    onChange={(event) =>
+                      onUpdate(item.id, { hourlyRate: event.target.value })
+                    }
+                    min="0"
+                    step="0.01"
+                    aria-label={`${item.description} hourly rate`}
+                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+              </div>
+
+              <p className="mt-3 text-right font-semibold text-slate-800">
+                ${(Number(item.hours) * Number(item.hourlyRate)).toFixed(2)}
+              </p>
             </div>
           ))}
         </div>

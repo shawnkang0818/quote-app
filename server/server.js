@@ -12,6 +12,7 @@ import Quote from "./models/Quote.js";
 import {
   calculateQuoteTotals,
   DEFAULT_TAX_RATE,
+  isValidLaborItem,
   roundCurrency,
 } from "./utils/quoteCalculations.js";
 
@@ -182,6 +183,13 @@ app.post("/api/quotes", async (req, res) => {
         .json({ message: "A quote needs at least one part or labor item" });
     }
 
+    if (!laborItems.every(isValidLaborItem)) {
+      return res.status(400).json({
+        message:
+          "Every labor item needs a description, hours above 0, and a valid hourly rate",
+      });
+    }
+
     const cleanItems = await Promise.all(
       items.map(async (item) => {
         const part = await Part.findById(item.partId);
@@ -211,7 +219,7 @@ app.post("/api/quotes", async (req, res) => {
       })
     );
     const cleanLaborItems = laborItems.map((item) => ({
-      description: item.description,
+      description: item.description.trim(),
       hours: Number(item.hours),
       hourlyRate: roundCurrency(item.hourlyRate),
       total: roundCurrency(Number(item.hours) * Number(item.hourlyRate)),

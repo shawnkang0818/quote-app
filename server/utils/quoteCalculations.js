@@ -4,7 +4,26 @@ export function roundCurrency(value) {
   return Math.round((Number(value) + Number.EPSILON) * 100) / 100;
 }
 
-export function calculateQuoteTotals({ items = [], laborItems = [], taxRate = DEFAULT_TAX_RATE }) {
+// Validate labor separately from total calculation so the API can return a
+// clear client error before attempting to save an invalid quote.
+export function isValidLaborItem(item) {
+  const hours = Number(item.hours);
+  const hourlyRate = Number(item.hourlyRate);
+
+  return (
+    Boolean(item.description?.trim()) &&
+    Number.isFinite(hours) &&
+    hours > 0 &&
+    Number.isFinite(hourlyRate) &&
+    hourlyRate >= 0
+  );
+}
+
+export function calculateQuoteTotals({
+  items = [],
+  laborItems = [],
+  taxRate = DEFAULT_TAX_RATE,
+}) {
   const partsSubtotal = roundCurrency(
     items.reduce(
       (sum, item) => sum + Number(item.price) * Number(item.quoteQuantity),
@@ -21,5 +40,12 @@ export function calculateQuoteTotals({ items = [], laborItems = [], taxRate = DE
   const taxAmount = roundCurrency(subtotal * Number(taxRate));
   const grandTotal = roundCurrency(subtotal + taxAmount);
 
-  return { partsSubtotal, laborTotal, subtotal, taxRate: Number(taxRate), taxAmount, grandTotal };
+  return {
+    partsSubtotal,
+    laborTotal,
+    subtotal,
+    taxRate: Number(taxRate),
+    taxAmount,
+    grandTotal,
+  };
 }

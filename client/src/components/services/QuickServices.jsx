@@ -1,4 +1,44 @@
+import { useState } from "react";
+
+function createLaborDraft(service) {
+  return service.labor.map((labor) => ({ ...labor }));
+}
+
 function QuickServices({ message, onApply, services }) {
+  const [selectedService, setSelectedService] = useState(null);
+  const [laborDraft, setLaborDraft] = useState([]);
+
+  // Selecting a template opens its editable defaults instead of immediately
+  // changing the active quote.
+  const handleSelect = (service) => {
+    setSelectedService(service);
+    setLaborDraft(createLaborDraft(service));
+  };
+
+  const updateLaborDraft = (index, field, value) => {
+    setLaborDraft((items) =>
+      items.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, [field]: value } : item
+      )
+    );
+  };
+
+  const handleApply = (event) => {
+    event.preventDefault();
+
+    // Convert form strings into numbers only when the service is applied.
+    onApply({
+      ...selectedService,
+      labor: laborDraft.map((labor) => ({
+        ...labor,
+        hours: Number(labor.hours),
+        hourlyRate: Number(labor.hourlyRate),
+      })),
+    });
+    setSelectedService(null);
+    setLaborDraft([]);
+  };
+
   return (
     <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <div>
@@ -9,7 +49,7 @@ function QuickServices({ message, onApply, services }) {
           Quick Services
         </h2>
         <p className="mt-1 text-sm text-slate-500">
-          Add common parts and labor to the current quote with one click.
+          Choose a common job, adjust its labor, then add it to the quote.
         </p>
       </div>
 
@@ -18,8 +58,12 @@ function QuickServices({ message, onApply, services }) {
           <button
             key={service.id}
             type="button"
-            onClick={() => onApply(service)}
-            className="group flex items-start gap-3 rounded-xl border border-slate-200 p-4 text-left transition hover:border-blue-300 hover:bg-blue-50"
+            onClick={() => handleSelect(service)}
+            className={`group flex items-start gap-3 rounded-xl border p-4 text-left transition hover:border-blue-300 hover:bg-blue-50 ${
+              selectedService?.id === service.id
+                ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
+                : "border-slate-200"
+            }`}
           >
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white group-hover:bg-blue-600">
               {service.shortCode}
@@ -35,6 +79,86 @@ function QuickServices({ message, onApply, services }) {
           </button>
         ))}
       </div>
+
+      {selectedService && (
+        <form
+          onSubmit={handleApply}
+          className="mt-5 rounded-2xl border border-blue-200 bg-blue-50/60 p-5"
+        >
+          <p className="text-sm font-semibold text-blue-700">
+            Configure service
+          </p>
+          <h3 className="mt-1 font-semibold text-slate-950">
+            {selectedService.name}
+          </h3>
+
+          <div className="mt-4 space-y-4">
+            {laborDraft.map((labor, index) => (
+              <div
+                key={`${selectedService.id}-${index}`}
+                className="rounded-xl border border-slate-200 bg-white p-4"
+              >
+                <p className="font-medium text-slate-800">
+                  {labor.description}
+                </p>
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <label className="text-sm font-medium text-slate-600">
+                    Labor Hours
+                    <input
+                      type="number"
+                      value={labor.hours}
+                      onChange={(event) =>
+                        updateLaborDraft(index, "hours", event.target.value)
+                      }
+                      min="0.1"
+                      step="0.1"
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      required
+                    />
+                  </label>
+                  <label className="text-sm font-medium text-slate-600">
+                    Hourly Rate ($)
+                    <input
+                      type="number"
+                      value={labor.hourlyRate}
+                      onChange={(event) =>
+                        updateLaborDraft(
+                          index,
+                          "hourlyRate",
+                          event.target.value
+                        )
+                      }
+                      min="0"
+                      step="0.01"
+                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      required
+                    />
+                  </label>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="submit"
+              className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+            >
+              Add service to quote
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedService(null);
+                setLaborDraft([]);
+              }}
+              className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
 
       {message && (
         <p

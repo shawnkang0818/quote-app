@@ -33,7 +33,8 @@ const quoteSchema = new mongoose.Schema(
     laborItems: [
       {
         description: { type: String, required: true, trim: true },
-        hours: { type: Number, required: true, min: 0 },
+        // A labor line must represent actual work; zero-hour rows are invalid.
+        hours: { type: Number, required: true, min: 0.1 },
         hourlyRate: { type: Number, required: true, min: 0 },
         total: { type: Number, required: true, min: 0 },
       },

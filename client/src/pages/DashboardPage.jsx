@@ -26,6 +26,21 @@ import {
 } from "../services/authService";
 import { applyQuickService } from "../utils/applyQuickService";
 
+// Shared validation protects both saved quotes and generated PDFs from
+// incomplete labor edits.
+function isValidLaborItem(item) {
+  const hours = Number(item.hours);
+  const hourlyRate = Number(item.hourlyRate);
+
+  return (
+    Boolean(item.description?.trim()) &&
+    Number.isFinite(hours) &&
+    hours > 0 &&
+    Number.isFinite(hourlyRate) &&
+    hourlyRate >= 0
+  );
+}
+
 function DashboardPage() {
   // Inventory administration state is kept separate from quote-building state
   // so an admin edit cannot accidentally alter the active customer quote.
@@ -152,12 +167,24 @@ function DashboardPage() {
   const addLabor = (labor) => {
     if (!labor.description || labor.hours <= 0 || labor.hourlyRate < 0) {
       setQuoteError("Enter a labor description, hours, and a valid rate.");
-      return;
+      return false;
     }
     setLaborItems((items) => [
       ...items,
       { ...labor, id: crypto.randomUUID() },
     ]);
+    setQuoteError("");
+    setSaveMessage("");
+    setSavedQuoteNumber("");
+    return true;
+  };
+
+  // Labor values remain editable after being added. Keeping the raw input
+  // string allows a field to be temporarily blank while the user types.
+  const updateLabor = (id, changes) => {
+    setLaborItems((items) =>
+      items.map((item) => (item.id === id ? { ...item, ...changes } : item))
+    );
     setQuoteError("");
     setSaveMessage("");
     setSavedQuoteNumber("");
@@ -203,6 +230,11 @@ function DashboardPage() {
   // PDF code is loaded only when requested, keeping the initial app bundle
   // smaller and the dashboard faster to open.
   const generatePDF = async () => {
+    if (!laborItems.every(isValidLaborItem)) {
+      setQuoteError("Every labor item needs hours above 0 and a valid rate.");
+      return;
+    }
+
     try {
       const { generateQuotePDF } = await import("../utils/generateQuotePDF");
       generateQuotePDF({
@@ -406,6 +438,11 @@ function DashboardPage() {
       return;
     }
 
+    if (!laborItems.every(isValidLaborItem)) {
+      setQuoteError("Every labor item needs hours above 0 and a valid rate.");
+      return;
+    }
+
     setIsSaving(true);
     try {
       const savedQuote = await createQuote({
@@ -548,6 +585,7 @@ function DashboardPage() {
           onRemove={removeFromQuote}
           onRemoveLabor={removeLabor}
           onSaveQuote={saveQuote}
+          onUpdateLabor={updateLabor}
           quoteItems={quoteItems}
           saveMessage={saveMessage}
           totals={totals}

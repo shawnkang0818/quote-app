@@ -48,3 +48,24 @@ test("does not exceed available stock", () => {
   assert.equal(result.quoteItems[0].quoteQuantity, 1);
   assert.deepEqual(result.missingParts, ["Oil filter"]);
 });
+
+test("keeps customized labor hours and hourly rate", () => {
+  const customizedService = {
+    ...service,
+    parts: [],
+    labor: [
+      { description: "Oil change", hours: 1.25, hourlyRate: 145 },
+    ],
+  };
+
+  const result = applyQuickService({
+    service: customizedService,
+    parts: [],
+    quoteItems: [],
+    laborItems: [],
+    idFactory: () => "labor-custom",
+  });
+
+  assert.equal(result.laborItems[0].hours, 1.25);
+  assert.equal(result.laborItems[0].hourlyRate, 145);
+});
