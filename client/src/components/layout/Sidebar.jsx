@@ -5,6 +5,7 @@ const navigation = [
   { label: "Quote History", to: "/quotes" },
   { label: "Customers", to: "/customers" },
   { label: "Inventory", to: "/inventory" },
+  { label: "Services", to: "/services" },
   { label: "Settings", to: "/settings" },
 ];
 

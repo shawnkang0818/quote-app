@@ -1,9 +1,8 @@
-// Quick-service templates describe common shop jobs without duplicating
-// inventory data. Each part matcher looks up a real Part from MongoDB before
-// it is added, so saved quotes always contain a valid inventory part ID.
-export const QUICK_SERVICES = [
+// These templates seed a new database once. After the first load, the shop's
+// administrators own the records and may edit or delete them from the UI.
+export const DEFAULT_QUICK_SERVICES = [
   {
-    id: "oil-change",
+    key: "oil-change",
     name: "Oil Change",
     shortCode: "OC",
     description: "Engine oil, filter, and installation labor",
@@ -14,11 +13,10 @@ export const QUICK_SERVICES = [
       },
       { label: "Oil filter", searchTerms: ["oil filter"] },
     ],
-    // Hourly rate is supplied by Business Settings when the job is opened.
     labor: [{ description: "Oil change service", hours: 0.5 }],
   },
   {
-    id: "front-brakes",
+    key: "front-brakes",
     name: "Front Brake Service",
     shortCode: "FB",
     description: "Front brake pads and replacement labor",
@@ -28,15 +26,10 @@ export const QUICK_SERVICES = [
         searchTerms: ["front brake pad", "brake pad"],
       },
     ],
-    labor: [
-      {
-        description: "Front brake pad replacement",
-        hours: 1.5,
-      },
-    ],
+    labor: [{ description: "Front brake pad replacement", hours: 1.5 }],
   },
   {
-    id: "tire-rotation",
+    key: "tire-rotation",
     name: "Tire Rotation",
     shortCode: "TR",
     description: "Rotate and inspect four tires",
@@ -44,7 +37,7 @@ export const QUICK_SERVICES = [
     labor: [{ description: "Tire rotation", hours: 0.5 }],
   },
   {
-    id: "battery",
+    key: "battery",
     name: "Battery Replacement",
     shortCode: "BR",
     description: "Battery and installation labor",
@@ -52,7 +45,7 @@ export const QUICK_SERVICES = [
     labor: [{ description: "Battery replacement", hours: 0.5 }],
   },
   {
-    id: "inspection",
+    key: "inspection",
     name: "Vehicle Inspection",
     shortCode: "VI",
     description: "General safety and maintenance inspection",
@@ -60,7 +53,7 @@ export const QUICK_SERVICES = [
     labor: [{ description: "Vehicle inspection", hours: 1 }],
   },
   {
-    id: "air-filter",
+    key: "air-filter",
     name: "Air Filter",
     shortCode: "AF",
     description: "Engine air filter and installation labor",

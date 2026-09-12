@@ -13,6 +13,8 @@ import {
 } from "./middleware/adminAuth.js";
 import Quote from "./models/Quote.js";
 import Customer from "./models/Customer.js";
+import QuickService from "./models/QuickService.js";
+import { DEFAULT_QUICK_SERVICES } from "./data/defaultQuickServices.js";
 import {
   calculateQuoteTotals,
   isValidLaborItem,
@@ -29,6 +31,10 @@ import {
   normalizePhone,
   normalizeVehicle,
 } from "./utils/customerRecords.js";
+import {
+  normalizeQuickService,
+  slugifyServiceName,
+} from "./utils/quickServices.js";
 
 dotenv.config();
 
@@ -119,6 +125,86 @@ app.put("/api/settings", adminAuth, async (req, res) => {
       }
     );
     return res.json(settings);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+async function seedQuickServicesIfEmpty() {
+  // Seed only a brand-new collection. Deleted defaults stay deleted and
+  // edited templates remain fully controlled by the shop.
+  if ((await QuickService.countDocuments()) === 0) {
+    await QuickService.insertMany(DEFAULT_QUICK_SERVICES);
+  }
+}
+
+async function createUniqueServiceKey(name) {
+  const base = slugifyServiceName(name);
+  let key = base;
+  let suffix = 2;
+  while (await QuickService.exists({ key })) {
+    key = `${base}-${suffix}`;
+    suffix += 1;
+  }
+  return key;
+}
+
+// Templates are public to the quote workspace; all mutations remain protected.
+app.get("/api/quick-services", async (_req, res) => {
+  try {
+    await seedQuickServicesIfEmpty();
+    return res.json(await QuickService.find().sort({ name: 1 }));
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.post("/api/quick-services", adminAuth, async (req, res) => {
+  let service;
+  try {
+    service = normalizeQuickService(req.body);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  try {
+    return res.status(201).json(
+      await QuickService.create({
+        ...service,
+        key: await createUniqueServiceKey(service.name),
+      })
+    );
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.put("/api/quick-services/:id", adminAuth, async (req, res) => {
+  let service;
+  try {
+    service = normalizeQuickService(req.body);
+  } catch (error) {
+    return res.status(400).json({ error: error.message });
+  }
+
+  try {
+    const updated = await QuickService.findByIdAndUpdate(
+      req.params.id,
+      service,
+      { returnDocument: "after", runValidators: true }
+    );
+    if (!updated) return res.status(404).json({ message: "Service not found" });
+    return res.json(updated);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.delete("/api/quick-services/:id", adminAuth, async (req, res) => {
+  try {
+    const deleted = await QuickService.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Service not found" });
+    return res.status(204).end();
   } catch (error) {
     return sendDatabaseError(res, error);
   }

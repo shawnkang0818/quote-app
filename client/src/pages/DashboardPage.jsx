@@ -5,11 +5,11 @@ import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
 import PartsServicesSearch from "../components/search/PartsServicesSearch";
 import QuickServices from "../components/services/QuickServices";
-import { QUICK_SERVICES } from "../data/quickServices";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
 import { useBusinessSettings } from "../hooks/useBusinessSettings";
 import { useParts } from "../hooks/useParts";
 import { useQuote } from "../hooks/useQuote";
+import { useQuickServices } from "../hooks/useQuickServices";
 import { useVehicle } from "../hooks/useVehicle";
 import { filterCatalogItems } from "../utils/catalogSearch";
 
@@ -25,6 +25,7 @@ function DashboardPage() {
   const favoriteJobs = useFavoriteJobs();
   const business = useBusinessSettings();
   const partsManager = useParts();
+  const quickServices = useQuickServices();
   const quote = useQuote(partsManager.parts, business.settings.taxRate);
   const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
 
@@ -33,7 +34,7 @@ function DashboardPage() {
     catalogSearch
   ).length;
   const matchingServiceCount = filterCatalogItems(
-    QUICK_SERVICES,
+    quickServices.services,
     catalogSearch
   ).length;
 
@@ -108,12 +109,14 @@ function DashboardPage() {
 
       <QuickServices
         defaultHourlyRate={business.settings.defaultHourlyRate}
+        errorMessage={quickServices.errorMessage}
         favoriteServiceIds={favoriteJobs.favoriteServiceIds}
+        isLoading={quickServices.isLoading}
         message={quote.quickServiceMessage}
         onApply={quote.applyService}
         onToggleFavorite={favoriteJobs.toggleFavorite}
         searchQuery={catalogSearch}
-        services={QUICK_SERVICES}
+        services={quickServices.services}
       />
 
       <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1.7fr)_minmax(360px,1fr)]">

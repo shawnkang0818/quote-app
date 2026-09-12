@@ -14,6 +14,8 @@ function createLaborDraft(service, defaultHourlyRate) {
 function QuickServices({
   favoriteServiceIds,
   defaultHourlyRate,
+  errorMessage,
+  isLoading,
   message,
   onApply,
   onToggleFavorite,
@@ -74,7 +76,15 @@ function QuickServices({
 
       <FavoriteJobs services={favoriteServices} onSelect={handleSelect} />
 
-      {filteredServices.length === 0 ? (
+      {errorMessage ? (
+        <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </p>
+      ) : isLoading ? (
+        <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
+          Loading quick services...
+        </p>
+      ) : filteredServices.length === 0 ? (
         <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
           <p className="font-medium text-slate-800">No matching services</p>
           <p className="mt-1 text-sm text-slate-500">
