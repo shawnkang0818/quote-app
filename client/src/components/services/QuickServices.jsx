@@ -1,103 +1,60 @@
-import { filterCatalogItems } from "../../utils/catalogSearch";
-
 function QuickServices({
-  favoriteServiceIds,
-  laborDraft,
   errorMessage,
+  favoriteServiceIds,
   isLoading,
   message,
-  onApply,
-  onClearSelection,
   onSelectService,
   onToggleFavorite,
-  onUpdateLaborDraft,
-  searchQuery,
   selectedService,
   services,
 }) {
-  const filteredServices = filterCatalogItems(services, searchQuery);
-
-  // Selecting a template opens its editable defaults instead of immediately
-  // changing the active quote.
-  const handleSelect = (service) => {
-    onSelectService(service);
-  };
-
-  const handleApply = (event) => {
-    event.preventDefault();
-
-    // Convert form strings into numbers only when the service is applied.
-    onApply({
-      ...selectedService,
-      labor: laborDraft.map((labor) => ({
-        ...labor,
-        hours: Number(labor.hours),
-        hourlyRate: Number(labor.hourlyRate),
-      })),
-    });
-    onClearSelection();
-  };
-
   return (
-    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
             Fast workflow
           </p>
-          <h2 className="mt-1 text-xl font-semibold text-slate-950">
+          <h2 className="mt-1 text-lg font-semibold text-slate-950">
             Quick Services
           </h2>
         </div>
-        <p className="text-sm text-slate-500">
-          Choose a job, adjust labor, and add it to the quote.
+        <p className="text-xs text-slate-500">
+          Select a common job, then customize it in the catalog.
         </p>
       </div>
 
       {errorMessage ? (
-        <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
         </p>
       ) : isLoading ? (
-        <p className="mt-5 rounded-xl bg-slate-50 p-6 text-center text-slate-500">
-          Loading quick services...
-        </p>
-      ) : filteredServices.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
-          <p className="font-medium text-slate-800">No matching services</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Try a shorter or different search.
-          </p>
-        </div>
+        <p className="mt-3 text-sm text-slate-500">Loading services...</p>
       ) : (
-        <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
-          {filteredServices.map((service) => {
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
+          {services.map((service) => {
             const isFavorite = favoriteServiceIds.includes(service.id);
+            const isSelected = selectedService?.id === service.id;
 
             return (
-              <article
+              <div
                 key={service.id}
-                className={`relative flex rounded-xl border transition hover:border-blue-300 hover:bg-blue-50 ${
-                  selectedService?.id === service.id
+                className={`relative rounded-xl border transition ${
+                  isSelected
                     ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
-                    : "border-slate-200"
+                    : "border-slate-200 hover:border-blue-300"
                 }`}
               >
                 <button
                   type="button"
-                  onClick={() => handleSelect(service)}
-                  className="group flex min-w-0 flex-1 items-start gap-3 p-3 pr-10 text-left"
+                  onClick={() => onSelectService(service)}
+                  className="flex w-full items-center gap-2 p-3 pr-9 text-left"
                 >
-                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white group-hover:bg-blue-600">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">
                     {service.shortCode}
                   </span>
-                  <span>
-                    <span className="block font-semibold text-slate-900">
-                      {service.name}
-                    </span>
-                    <span className="mt-1 block text-xs leading-4 text-slate-500 2xl:hidden">
-                      {service.description}
-                    </span>
+                  <span className="min-w-0 truncate text-sm font-semibold text-slate-900">
+                    {service.name}
                   </span>
                 </button>
                 <button
@@ -106,104 +63,23 @@ function QuickServices({
                   aria-label={`${isFavorite ? "Remove" : "Add"} ${
                     service.name
                   } ${isFavorite ? "from" : "to"} favorites`}
-                  title={`${isFavorite ? "Remove from" : "Add to"} favorites`}
-                  className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-lg transition ${
+                  className={`absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-lg transition ${
                     isFavorite
-                      ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
-                      : "bg-slate-100 text-slate-400 hover:bg-amber-100 hover:text-amber-600"
+                      ? "bg-amber-100 text-amber-600"
+                      : "text-slate-400 hover:bg-amber-50 hover:text-amber-600"
                   }`}
                 >
                   {isFavorite ? "★" : "☆"}
                 </button>
-              </article>
+              </div>
             );
           })}
         </div>
       )}
 
-      {selectedService && (
-        <form
-          onSubmit={handleApply}
-          className="mt-5 rounded-2xl border border-blue-200 bg-blue-50/60 p-5"
-        >
-          <p className="text-sm font-semibold text-blue-700">
-            Configure service
-          </p>
-          <h3 className="mt-1 font-semibold text-slate-950">
-            {selectedService.name}
-          </h3>
-
-          <div className="mt-4 space-y-4">
-            {laborDraft.map((labor, index) => (
-              <div
-                key={`${selectedService.id}-${index}`}
-                className="rounded-xl border border-slate-200 bg-white p-4"
-              >
-                <p className="font-medium text-slate-800">
-                  {labor.description}
-                </p>
-                <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                  <label className="text-sm font-medium text-slate-600">
-                    Labor Hours
-                    {/* Accept quarter-hour and decimal labor entries such as 1.25. */}
-                    <input
-                      type="number"
-                      value={labor.hours}
-                      onChange={(event) =>
-                        onUpdateLaborDraft(index, "hours", event.target.value)
-                      }
-                      min="0.1"
-                      step="0.01"
-                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      required
-                    />
-                  </label>
-                  <label className="text-sm font-medium text-slate-600">
-                    Hourly Rate ($)
-                    <input
-                      type="number"
-                      value={labor.hourlyRate}
-                      onChange={(event) =>
-                        onUpdateLaborDraft(
-                          index,
-                          "hourlyRate",
-                          event.target.value
-                        )
-                      }
-                      min="0"
-                      step="0.01"
-                      className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                      required
-                    />
-                  </label>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="submit"
-              className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-            >
-              Add service to quote
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                onClearSelection();
-              }}
-              className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
-            >
-              Cancel
-            </button>
-          </div>
-        </form>
-      )}
-
       {message && (
         <p
-          className={`mt-4 rounded-xl px-4 py-3 text-sm ${
+          className={`mt-3 rounded-xl px-4 py-2.5 text-sm ${
             message.type === "warning"
               ? "bg-amber-50 text-amber-800"
               : "bg-emerald-50 text-emerald-700"

@@ -1,10 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import PartsServicesCatalog from "../components/catalog/PartsServicesCatalog";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
-import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
 import QuoteSummary from "../components/quote/QuoteSummary";
-import PartsServicesSearch from "../components/search/PartsServicesSearch";
 import FavoriteJobs from "../components/services/FavoriteJobs";
 import QuickServices from "../components/services/QuickServices";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
@@ -14,13 +13,13 @@ import { useQuote } from "../hooks/useQuote";
 import { useQuickServices } from "../hooks/useQuickServices";
 import { useServiceSelection } from "../hooks/useServiceSelection";
 import { useVehicle } from "../hooks/useVehicle";
-import { filterCatalogItems } from "../utils/catalogSearch";
 
 function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const quotePrefill = location.state?.quotePrefill;
   const [catalogSearch, setCatalogSearch] = useState("");
+  const [catalogTab, setCatalogTab] = useState("all");
   const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
     Boolean(quotePrefill)
   );
@@ -35,17 +34,23 @@ function DashboardPage() {
   const quote = useQuote(partsManager.parts, business.settings.taxRate);
   const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
 
-  const matchingPartCount = filterCatalogItems(
-    partsManager.parts,
-    catalogSearch
-  ).length;
-  const matchingServiceCount = filterCatalogItems(
-    quickServices.services,
-    catalogSearch
-  ).length;
   const favoriteServices = quickServices.services.filter((service) =>
     favoriteJobs.favoriteServiceIds.includes(service.id)
   );
+
+  const selectService = (service, shouldScroll = true) => {
+    serviceSelection.selectService(service);
+    setCatalogTab("services");
+
+    if (shouldScroll) {
+      // Quick and favorite buttons lead directly to the shared configurator.
+      requestAnimationFrame(() =>
+        document
+          .getElementById("parts-services-catalog")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+      );
+    }
+  };
 
   useEffect(() => {
     if (!quotePrefill) return;
@@ -96,7 +101,7 @@ function DashboardPage() {
         />
         <FavoriteJobs
           services={favoriteServices}
-          onSelect={serviceSelection.selectService}
+          onSelect={selectService}
         />
       </div>
 
@@ -104,33 +109,31 @@ function DashboardPage() {
         errorMessage={quickServices.errorMessage}
         favoriteServiceIds={favoriteJobs.favoriteServiceIds}
         isLoading={quickServices.isLoading}
-        laborDraft={serviceSelection.laborDraft}
         message={quote.quickServiceMessage}
-        onApply={quote.applyService}
-        onClearSelection={serviceSelection.clearSelection}
-        onSelectService={serviceSelection.selectService}
+        onSelectService={selectService}
         onToggleFavorite={favoriteJobs.toggleFavorite}
-        onUpdateLaborDraft={serviceSelection.updateLaborDraft}
-        searchQuery={catalogSearch}
         selectedService={serviceSelection.selectedService}
         services={quickServices.services}
       />
 
       {/* The workbench mirrors the shop flow: find, build, then confirm totals. */}
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(240px,0.85fr)_minmax(360px,1.2fr)_minmax(240px,0.7fr)]">
-        <div className="min-w-0 space-y-5">
-          <PartsServicesSearch
-            partCount={matchingPartCount}
-            query={catalogSearch}
-            serviceCount={matchingServiceCount}
-            onChange={(event) => setCatalogSearch(event.target.value)}
-            onClear={() => setCatalogSearch("")}
-          />
-          <PartsTable
+        <div className="min-w-0">
+          <PartsServicesCatalog
+            activeTab={catalogTab}
             errorMessage={partsManager.inventoryError}
-            onAddToQuote={quote.addPart}
+            laborDraft={serviceSelection.laborDraft}
+            onAddPart={quote.addPart}
+            onApplyService={quote.applyService}
+            onCancelService={serviceSelection.clearSelection}
+            onQueryChange={(event) => setCatalogSearch(event.target.value)}
+            onSelectService={(service) => selectService(service, false)}
+            onTabChange={setCatalogTab}
+            onUpdateLabor={serviceSelection.updateLaborDraft}
             parts={partsManager.parts}
-            searchQuery={catalogSearch}
+            query={catalogSearch}
+            selectedService={serviceSelection.selectedService}
+            services={quickServices.services}
           />
         </div>
 
