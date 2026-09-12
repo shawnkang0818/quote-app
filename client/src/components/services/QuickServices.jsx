@@ -1,12 +1,22 @@
 import { useState } from "react";
+import FavoriteJobs from "./FavoriteJobs";
 
 function createLaborDraft(service) {
   return service.labor.map((labor) => ({ ...labor }));
 }
 
-function QuickServices({ message, onApply, services }) {
+function QuickServices({
+  favoriteServiceIds,
+  message,
+  onApply,
+  onToggleFavorite,
+  services,
+}) {
   const [selectedService, setSelectedService] = useState(null);
   const [laborDraft, setLaborDraft] = useState([]);
+  const favoriteServices = services.filter((service) =>
+    favoriteServiceIds.includes(service.id)
+  );
 
   // Selecting a template opens its editable defaults instead of immediately
   // changing the active quote.
@@ -53,31 +63,56 @@ function QuickServices({ message, onApply, services }) {
         </p>
       </div>
 
+      <FavoriteJobs services={favoriteServices} onSelect={handleSelect} />
+
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {services.map((service) => (
-          <button
-            key={service.id}
-            type="button"
-            onClick={() => handleSelect(service)}
-            className={`group flex items-start gap-3 rounded-xl border p-4 text-left transition hover:border-blue-300 hover:bg-blue-50 ${
-              selectedService?.id === service.id
-                ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
-                : "border-slate-200"
-            }`}
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white group-hover:bg-blue-600">
-              {service.shortCode}
-            </span>
-            <span>
-              <span className="block font-semibold text-slate-900">
-                {service.name}
-              </span>
-              <span className="mt-1 block text-xs leading-5 text-slate-500">
-                {service.description}
-              </span>
-            </span>
-          </button>
-        ))}
+        {services.map((service) => {
+          const isFavorite = favoriteServiceIds.includes(service.id);
+
+          return (
+            <article
+              key={service.id}
+              className={`relative flex rounded-xl border transition hover:border-blue-300 hover:bg-blue-50 ${
+                selectedService?.id === service.id
+                  ? "border-blue-400 bg-blue-50 ring-2 ring-blue-100"
+                  : "border-slate-200"
+              }`}
+            >
+              <button
+                type="button"
+                onClick={() => handleSelect(service)}
+                className="group flex min-w-0 flex-1 items-start gap-3 p-4 pr-11 text-left"
+              >
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white group-hover:bg-blue-600">
+                  {service.shortCode}
+                </span>
+                <span>
+                  <span className="block font-semibold text-slate-900">
+                    {service.name}
+                  </span>
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    {service.description}
+                  </span>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onToggleFavorite(service.id)}
+                aria-label={`${isFavorite ? "Remove" : "Add"} ${
+                  service.name
+                } ${isFavorite ? "from" : "to"} favorites`}
+                title={`${isFavorite ? "Remove from" : "Add to"} favorites`}
+                className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg text-lg transition ${
+                  isFavorite
+                    ? "bg-amber-100 text-amber-600 hover:bg-amber-200"
+                    : "bg-slate-100 text-slate-400 hover:bg-amber-100 hover:text-amber-600"
+                }`}
+              >
+                {isFavorite ? "★" : "☆"}
+              </button>
+            </article>
+          );
+        })}
       </div>
 
       {selectedService && (

@@ -25,6 +25,7 @@ import {
   verifyAdminSession,
 } from "../services/authService";
 import { applyQuickService } from "../utils/applyQuickService";
+import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
 
 // Shared validation protects both saved quotes and generated PDFs from
 // incomplete labor edits.
@@ -42,6 +43,8 @@ function isValidLaborItem(item) {
 }
 
 function DashboardPage() {
+  const { favoriteServiceIds, toggleFavorite } = useFavoriteJobs();
+
   // Inventory administration state is kept separate from quote-building state
   // so an admin edit cannot accidentally alter the active customer quote.
   const [parts, setParts] = useState([]);
@@ -529,8 +532,10 @@ function DashboardPage() {
       />
 
       <QuickServices
+        favoriteServiceIds={favoriteServiceIds}
         message={quickServiceMessage}
         onApply={handleQuickService}
+        onToggleFavorite={toggleFavorite}
         services={QUICK_SERVICES}
       />
 
