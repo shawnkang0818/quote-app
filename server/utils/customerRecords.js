@@ -32,6 +32,7 @@ export function normalizeCustomerRecord(customer = {}) {
   const name = String(customer.name || "").trim();
   const phone = String(customer.phone || "").trim();
   const email = normalizeEmail(customer.email);
+  const notes = String(customer.notes || "").trim();
 
   if (!name) {
     const error = new Error("Customer name is required");
@@ -40,6 +41,36 @@ export function normalizeCustomerRecord(customer = {}) {
   }
   if (!phone && !email) {
     const error = new Error("Enter a phone number or email address");
+    error.status = 400;
+    throw error;
+  }
+  if (notes.length > 2000) {
+    const error = new Error("Customer notes must be 2000 characters or fewer");
+    error.status = 400;
+    throw error;
+  }
+
+  const tagValues = Array.isArray(customer.tags)
+    ? customer.tags
+    : String(customer.tags || "").split(",");
+  const tags = [];
+  const tagKeys = new Set();
+  for (const value of tagValues) {
+    const tag = String(value || "").trim();
+    if (!tag) continue;
+    if (tag.length > 30) {
+      const error = new Error("Each customer tag must be 30 characters or fewer");
+      error.status = 400;
+      throw error;
+    }
+    const key = tag.toLowerCase();
+    if (!tagKeys.has(key)) {
+      tagKeys.add(key);
+      tags.push(tag);
+    }
+  }
+  if (tags.length > 12) {
+    const error = new Error("A customer can have up to 12 tags");
     error.status = 400;
     throw error;
   }
@@ -73,6 +104,8 @@ export function normalizeCustomerRecord(customer = {}) {
     phoneNormalized: normalizePhone(phone),
     email,
     emailNormalized: email,
+    notes,
+    tags,
     vehicles,
   };
 }

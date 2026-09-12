@@ -44,6 +44,8 @@ test("normalizes an editable customer record and removes duplicate vehicles", ()
       name: " Jane Doe ",
       phone: "(310) 555-0100",
       email: " JANE@EXAMPLE.COM ",
+      notes: " Prefers text messages. ",
+      tags: ["VIP", "vip", "Fleet"],
       vehicles: [
         { year: "2022", make: "Toyota", model: "Camry", vin: "abc" },
         { year: "2023", make: "Toyota", model: "RAV4", vin: "ABC" },
@@ -55,6 +57,8 @@ test("normalizes an editable customer record and removes duplicate vehicles", ()
       phoneNormalized: "3105550100",
       email: "jane@example.com",
       emailNormalized: "jane@example.com",
+      notes: "Prefers text messages.",
+      tags: ["VIP", "Fleet"],
       vehicles: [
         {
           year: "2023",
@@ -66,6 +70,27 @@ test("normalizes an editable customer record and removes duplicate vehicles", ()
         },
       ],
     }
+  );
+});
+
+test("validates customer notes and tag limits", () => {
+  assert.throws(
+    () =>
+      normalizeCustomerRecord({
+        name: "Jane",
+        email: "jane@example.com",
+        notes: "x".repeat(2001),
+      }),
+    { message: "Customer notes must be 2000 characters or fewer" }
+  );
+  assert.throws(
+    () =>
+      normalizeCustomerRecord({
+        name: "Jane",
+        email: "jane@example.com",
+        tags: Array.from({ length: 13 }, (_, index) => `Tag ${index}`),
+      }),
+    { message: "A customer can have up to 12 tags" }
   );
 });
 

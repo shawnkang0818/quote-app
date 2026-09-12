@@ -119,7 +119,7 @@ function CustomersPage() {
             Customer Records
           </h1>
           <p className="mt-2 text-slate-500">
-            Find returning customers by name, contact, VIN, plate, or vehicle.
+          Find returning customers by name, contact, tag, VIN, plate, or vehicle.
           </p>
         </div>
         {adminToken && editingCustomer === undefined && (
@@ -167,7 +167,7 @@ function CustomersPage() {
                 type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Name, phone, email, VIN, plate, make, or model"
+                placeholder="Name, phone, email, tag, VIN, plate, make, or model"
                 className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
             </label>
@@ -204,6 +204,18 @@ function CustomersPage() {
                           .filter(Boolean)
                           .join(" • ") || "No contact information"}
                       </p>
+                      {customer.tags?.length > 0 && (
+                        <div className="mt-2 flex flex-wrap gap-1.5">
+                          {customer.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-start gap-2 sm:items-end">
                       <p className="text-xs text-slate-500">
@@ -238,6 +250,12 @@ function CustomersPage() {
                       </div>
                     </div>
                   </div>
+
+                  {customer.notes && (
+                    <p className="mt-4 line-clamp-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                      {customer.notes}
+                    </p>
+                  )}
 
                   <div className="mt-4 space-y-2">
                     {customer.vehicles.length === 0 ? (

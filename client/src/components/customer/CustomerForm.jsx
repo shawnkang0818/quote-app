@@ -24,6 +24,8 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
     name: customer?.name || "",
     phone: customer?.phone || "",
     email: customer?.email || "",
+    notes: customer?.notes || "",
+    tags: (customer?.tags || []).join(", "),
     vehicles: (customer?.vehicles || []).map(editableVehicle),
   }));
 
@@ -48,6 +50,10 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
       name: formData.name,
       phone: formData.phone,
       email: formData.email,
+      notes: formData.notes,
+      // Comma-separated input keeps tag entry fast while the API receives a
+      // predictable array that it can trim, deduplicate, and validate.
+      tags: formData.tags.split(","),
       // Send only business fields; local React keys and Mongo IDs remain local.
       vehicles: formData.vehicles.map((vehicle) => ({
         year: vehicle.year,
@@ -95,6 +101,39 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
             />
           </label>
         ))}
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-[minmax(220px,0.7fr)_minmax(300px,1.3fr)]">
+        <label className="block text-sm font-medium text-slate-700">
+          Tags
+          <input
+            name="tags"
+            type="text"
+            value={formData.tags}
+            onChange={updateCustomer}
+            placeholder="VIP, Fleet, Follow-up"
+            className="mt-2 w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+          <span className="mt-1 block text-xs font-normal text-slate-500">
+            Separate tags with commas; maximum 12.
+          </span>
+        </label>
+
+        <label className="block text-sm font-medium text-slate-700">
+          Customer notes
+          <textarea
+            name="notes"
+            value={formData.notes}
+            onChange={updateCustomer}
+            maxLength="2000"
+            rows="3"
+            placeholder="Preferences, communication notes, or account context"
+            className="mt-2 w-full resize-y rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+          <span className="mt-1 block text-right text-xs font-normal text-slate-400">
+            {formData.notes.length}/2000
+          </span>
+        </label>
       </div>
 
       <div className="mt-6 border-t border-slate-200 pt-5">

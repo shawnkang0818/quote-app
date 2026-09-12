@@ -19,6 +19,15 @@ const customerSchema = new mongoose.Schema(
     phoneNormalized: { type: String, default: "", index: true },
     email: { type: String, trim: true, lowercase: true, default: "" },
     emailNormalized: { type: String, default: "", index: true },
+    notes: { type: String, trim: true, maxlength: 2000, default: "" },
+    tags: {
+      type: [{ type: String, trim: true, maxlength: 30 }],
+      default: [],
+      validate: {
+        validator: (tags) => tags.length <= 12,
+        message: "A customer can have up to 12 tags",
+      },
+    },
     vehicles: { type: [customerVehicleSchema], default: [] },
     lastVisitAt: Date,
     lastQuoteId: { type: mongoose.Schema.Types.ObjectId, ref: "Quote" },

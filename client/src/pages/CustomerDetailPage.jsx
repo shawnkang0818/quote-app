@@ -132,6 +132,36 @@ function CustomerDetailPage() {
         </button>
       </header>
 
+      <section className="grid gap-5 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm lg:grid-cols-[minmax(220px,0.7fr)_minmax(320px,1.3fr)]">
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Customer Tags
+          </h2>
+          {customer.tags?.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {customer.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-full bg-blue-100 px-3 py-1.5 text-sm font-semibold text-blue-800"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-slate-500">No tags added.</p>
+          )}
+        </div>
+        <div>
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            Customer Notes
+          </h2>
+          <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
+            {customer.notes || "No customer notes recorded."}
+          </p>
+        </div>
+      </section>
+
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex items-center justify-between">
           <div>

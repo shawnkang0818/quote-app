@@ -289,6 +289,7 @@ app.get("/api/customers", adminAuth, async (req, res) => {
         { "vehicles.licensePlate": regex },
         { "vehicles.make": regex },
         { "vehicles.model": regex },
+        { tags: regex },
       ];
     }
     const customers = await Customer.find(query)
