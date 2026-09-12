@@ -40,6 +40,7 @@ function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
           required
         />
         <div className="grid grid-cols-2 gap-2">
+          {/* Allow common shop values such as 0.25, 0.3, and 1.25 hours. */}
           <input
             type="number"
             value={labor.hours}
@@ -47,7 +48,7 @@ function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
               setLabor((current) => ({ ...current, hours: event.target.value }))
             }
             min="0.1"
-            step="0.1"
+            step="0.01"
             placeholder="Hours"
             className="rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             required
@@ -97,6 +98,7 @@ function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <label className="text-xs font-medium text-slate-500">
                   Hours
+                  {/* Keep saved labor rows editable at the same precision. */}
                   <input
                     type="number"
                     value={item.hours}
@@ -104,7 +106,7 @@ function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
                       onUpdate(item.id, { hours: event.target.value })
                     }
                     min="0.1"
-                    step="0.1"
+                    step="0.01"
                     aria-label={`${item.description} labor hours`}
                     className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
