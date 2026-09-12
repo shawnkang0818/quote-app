@@ -15,12 +15,10 @@ function PartsTable({
   );
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex items-center justify-between gap-4">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
-            Parts Inventory
-          </h2>
+          <h2 className="text-lg font-semibold text-slate-950">Parts</h2>
           <p className="mt-1 text-sm text-slate-500">
             Select parts to add them to the current quote.
           </p>
@@ -51,17 +49,16 @@ function PartsTable({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[620px] text-sm">
+        <div>
+          <table className="w-full table-fixed text-sm">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
-                <th className="rounded-l-xl px-4 py-3 text-left font-semibold">
-                  Name
+                <th className="w-[52%] rounded-l-xl px-3 py-3 text-left font-semibold">
+                  Part
                 </th>
-                <th className="px-4 py-3 text-left font-semibold">Price</th>
-                <th className="px-4 py-3 text-left font-semibold">Stock</th>
-                <th className="rounded-r-xl px-4 py-3 text-left font-semibold">
-                  Quote
+                <th className="w-[25%] px-2 py-3 text-right font-semibold">Price</th>
+                <th className="w-[23%] rounded-r-xl px-2 py-3 text-right font-semibold">
+                  Add
                 </th>
               </tr>
             </thead>
@@ -69,21 +66,23 @@ function PartsTable({
             <tbody className="divide-y divide-slate-200">
               {filteredParts.map((part) => (
                 <tr key={part._id} className="transition hover:bg-slate-50">
-                  <td className="px-4 py-4 font-medium text-slate-900">
-                    {part.name}
+                  <td className="px-3 py-3 align-top font-medium text-slate-900">
+                    <span className="block break-words">{part.name}</span>
+                    <span className={`mt-1 block text-xs ${Number(part.quantity) <= 0 ? "text-red-600" : "text-slate-400"}`}>
+                      {Number(part.quantity) <= 0 ? "Out of stock" : `${part.quantity} in stock`}
+                    </span>
                   </td>
-                  <td className="px-4 py-4 text-slate-600">
+                  <td className="px-2 py-3 text-right text-slate-600">
                     ${Number(part.price).toFixed(2)}
                   </td>
-                  <td className="px-4 py-4 text-slate-600">{part.quantity}</td>
-                  <td className="px-4 py-4">
+                  <td className="px-2 py-3 text-right">
                     <button
                       type="button"
                       onClick={() => onAddToQuote(part)}
                       disabled={Number(part.quantity) <= 0}
-                      className="rounded-lg bg-emerald-600 px-3 py-2 font-medium text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+                      className="rounded-lg border border-blue-200 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:text-slate-400"
                     >
-                      {Number(part.quantity) <= 0 ? "Out of stock" : "Add"}
+                      Add
                     </button>
                   </td>
 

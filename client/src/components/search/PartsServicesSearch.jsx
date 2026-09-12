@@ -8,7 +8,7 @@ function PartsServicesSearch({
   const resultCount = partCount + serviceCount;
 
   return (
-    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <label htmlFor="catalog-search" className="block">
         <span className="text-sm font-semibold uppercase tracking-wide text-blue-600">
           Parts & Services Search
@@ -18,20 +18,20 @@ function PartsServicesSearch({
         </span>
       </label>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-3 flex flex-col gap-2">
         <input
           id="catalog-search"
           type="search"
           value={query}
           onChange={onChange}
           placeholder="Search oil, brakes, battery, inspection..."
-          className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-3 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
         />
         {query && (
           <button
             type="button"
             onClick={onClear}
-            className="rounded-xl bg-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-300"
+            className="self-start rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
           >
             Clear Search
           </button>

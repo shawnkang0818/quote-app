@@ -12,17 +12,22 @@ function CustomerVehicleCard({
   years,
 }) {
   return (
-    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5">
-        <h2 className="text-xl font-semibold text-slate-950">
-          Customer & Vehicle
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Add the customer and vehicle details for this quotation.
-        </p>
+    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-xl font-semibold text-slate-950">
+            Customer & Vehicle
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Identify the customer and vehicle before building the quote.
+          </p>
+        </div>
+        <span className="text-xs font-medium text-slate-400">
+          Contact and vehicle details
+        </span>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Customer name

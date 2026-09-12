@@ -61,16 +61,18 @@ function QuickServices({
   };
 
   return (
-    <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div>
-        <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
-          Fast workflow
-        </p>
-        <h2 className="mt-1 text-xl font-semibold text-slate-950">
-          Quick Services
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          Choose a common job, adjust its labor, then add it to the quote.
+    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-blue-600">
+            Fast workflow
+          </p>
+          <h2 className="mt-1 text-xl font-semibold text-slate-950">
+            Quick Services
+          </h2>
+        </div>
+        <p className="text-sm text-slate-500">
+          Choose a job, adjust labor, and add it to the quote.
         </p>
       </div>
 
@@ -92,7 +94,7 @@ function QuickServices({
           </p>
         </div>
       ) : (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="mt-4 grid gap-2 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
           {filteredServices.map((service) => {
             const isFavorite = favoriteServiceIds.includes(service.id);
 
@@ -108,16 +110,16 @@ function QuickServices({
                 <button
                   type="button"
                   onClick={() => handleSelect(service)}
-                  className="group flex min-w-0 flex-1 items-start gap-3 p-4 pr-11 text-left"
+                  className="group flex min-w-0 flex-1 items-start gap-3 p-3 pr-10 text-left"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-sm font-bold text-white group-hover:bg-blue-600">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-xs font-bold text-white group-hover:bg-blue-600">
                     {service.shortCode}
                   </span>
                   <span>
                     <span className="block font-semibold text-slate-900">
                       {service.name}
                     </span>
-                    <span className="mt-1 block text-xs leading-5 text-slate-500">
+                    <span className="mt-1 block text-xs leading-4 text-slate-500 2xl:hidden">
                       {service.description}
                     </span>
                   </span>
