@@ -4,6 +4,7 @@ const navigation = [
   { label: "Create Quote", to: "/", end: true },
   { label: "Quote History", to: "/quotes" },
   { label: "Customers", to: "/customers" },
+  { label: "Inventory", to: "/inventory" },
   { label: "Settings", to: "/settings" },
 ];
 
@@ -23,7 +24,7 @@ function Sidebar() {
           <p className="text-sm text-slate-500">Service workspace</p>
         </div>
 
-        <nav className="flex gap-2 lg:mt-8 lg:flex-col">
+        <nav className="flex max-w-full gap-2 overflow-x-auto lg:mt-8 lg:flex-col lg:overflow-visible">
           {navigation.map((item) => (
             <NavLink
               key={item.to}

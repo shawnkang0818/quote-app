@@ -3,10 +3,7 @@ import { filterCatalogItems } from "../../utils/catalogSearch";
 
 function PartsTable({
   errorMessage,
-  isAdmin,
   onAddToQuote,
-  onDelete,
-  onEdit,
   parts,
   searchQuery,
 }) {
@@ -63,12 +60,9 @@ function PartsTable({
                 </th>
                 <th className="px-4 py-3 text-left font-semibold">Price</th>
                 <th className="px-4 py-3 text-left font-semibold">Stock</th>
-                <th className="px-4 py-3 text-left font-semibold">Quote</th>
-                {isAdmin && (
-                  <th className="rounded-r-xl px-4 py-3 text-left font-semibold">
-                    Actions
-                  </th>
-                )}
+                <th className="rounded-r-xl px-4 py-3 text-left font-semibold">
+                  Quote
+                </th>
               </tr>
             </thead>
 
@@ -93,26 +87,6 @@ function PartsTable({
                     </button>
                   </td>
 
-                  {isAdmin && (
-                    <td className="px-4 py-4">
-                      <div className="flex gap-2">
-                        <button
-                          type="button"
-                          onClick={() => onEdit(part)}
-                          className="rounded-lg bg-amber-500 px-3 py-2 font-medium text-white transition hover:bg-amber-600"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => onDelete(part._id)}
-                          className="rounded-lg bg-red-600 px-3 py-2 font-medium text-white transition hover:bg-red-700"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </td>
-                  )}
                 </tr>
               ))}
             </tbody>

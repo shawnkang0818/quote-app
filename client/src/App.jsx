@@ -6,6 +6,7 @@ import QuoteDetailPage from "./pages/QuoteDetailPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import CustomersPage from "./pages/CustomersPage";
+import InventoryPage from "./pages/InventoryPage";
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
         <Route path="/quotes/:quoteId" element={<QuoteDetailPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/customers" element={<CustomersPage />} />
+        <Route path="/inventory" element={<InventoryPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>
