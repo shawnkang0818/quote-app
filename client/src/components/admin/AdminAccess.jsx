@@ -1,5 +1,6 @@
 function AdminAccess({
   adminPassword,
+  description = "Enter the administrator password to manage inventory.",
   errorMessage,
   onPasswordChange,
   onSubmit,
@@ -7,9 +8,7 @@ function AdminAccess({
   return (
     <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-xl font-semibold text-slate-950">Admin Access</h2>
-      <p className="mt-1 text-sm text-slate-500">
-        Enter the administrator password to manage inventory.
-      </p>
+      <p className="mt-1 text-sm text-slate-500">{description}</p>
 
       <form
         onSubmit={onSubmit}

@@ -8,6 +8,7 @@ import PartsServicesSearch from "../components/search/PartsServicesSearch";
 import QuickServices from "../components/services/QuickServices";
 import { QUICK_SERVICES } from "../data/quickServices";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
+import { useBusinessSettings } from "../hooks/useBusinessSettings";
 import { useParts } from "../hooks/useParts";
 import { useQuote } from "../hooks/useQuote";
 import { useVehicle } from "../hooks/useVehicle";
@@ -29,8 +30,9 @@ function DashboardPage() {
   const [catalogSearch, setCatalogSearch] = useState("");
 
   const favoriteJobs = useFavoriteJobs();
+  const business = useBusinessSettings();
   const partsManager = useParts(adminToken);
-  const quote = useQuote(partsManager.parts);
+  const quote = useQuote(partsManager.parts, business.settings.taxRate);
   const vehicleForm = useVehicle(quote.markDraftChanged);
 
   const matchingPartCount = filterCatalogItems(
@@ -124,6 +126,12 @@ function DashboardPage() {
         )}
       </header>
 
+      {business.settingsError && (
+        <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {business.settingsError}
+        </p>
+      )}
+
       <CustomerVehicleCard
         customerName={vehicleForm.customerName}
         errorMessage={vehicleForm.vehicleError}
@@ -146,6 +154,7 @@ function DashboardPage() {
       />
 
       <QuickServices
+        defaultHourlyRate={business.settings.defaultHourlyRate}
         favoriteServiceIds={favoriteJobs.favoriteServiceIds}
         message={quote.quickServiceMessage}
         onApply={quote.applyService}
@@ -186,6 +195,7 @@ function DashboardPage() {
         />
 
         <QuoteBuilder
+          defaultHourlyRate={business.settings.defaultHourlyRate}
           errorMessage={quote.quoteError}
           isSaving={quote.isSaving}
           isSaved={Boolean(quote.savedQuoteNumber)}
@@ -195,6 +205,7 @@ function DashboardPage() {
           onDecreaseQuantity={quote.decreaseQuantity}
           onGeneratePDF={() =>
             quote.generatePDF({
+              businessSettings: business.settings,
               customerName: vehicleForm.customerName,
               vehicle: vehicleForm.vehicle,
             })

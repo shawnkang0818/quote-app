@@ -16,7 +16,7 @@ function isValidLaborItem(item) {
   );
 }
 
-export function useQuote(parts) {
+export function useQuote(parts, taxRate) {
   const [quoteItems, setQuoteItems] = useState([]);
   const [laborItems, setLaborItems] = useState([]);
   const [quoteError, setQuoteError] = useState("");
@@ -25,7 +25,7 @@ export function useQuote(parts) {
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
   const [quickServiceMessage, setQuickServiceMessage] = useState(null);
 
-  const totals = calculateQuoteTotals({ quoteItems, laborItems });
+  const totals = calculateQuoteTotals({ quoteItems, laborItems, taxRate });
 
   // Any draft change makes the previous saved marker obsolete and allows the
   // updated quote to be saved as a new record.
@@ -166,7 +166,7 @@ export function useQuote(parts) {
     markDraftChanged();
   };
 
-  const generatePDF = async ({ customerName, vehicle }) => {
+  const generatePDF = async ({ businessSettings, customerName, vehicle }) => {
     if (!laborItems.every(isValidLaborItem)) {
       setQuoteError("Every labor item needs hours above 0 and a valid rate.");
       return;
@@ -177,10 +177,12 @@ export function useQuote(parts) {
       const { generateQuotePDF } = await import("../utils/generateQuotePDF");
       generateQuotePDF({
         customerName,
+        businessSettings,
         laborItems,
         quoteItems,
         quoteNumber: savedQuoteNumber,
         vehicle,
+        taxRate,
       });
       setQuoteError("");
     } catch (error) {

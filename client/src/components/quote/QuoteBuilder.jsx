@@ -1,6 +1,7 @@
 import LaborSection from "./LaborSection";
 
 function QuoteBuilder({
+  defaultHourlyRate,
   errorMessage,
   isSaving,
   isSaved,
@@ -88,6 +89,8 @@ function QuoteBuilder({
       )}
 
       <LaborSection
+        key={defaultHourlyRate}
+        defaultHourlyRate={defaultHourlyRate}
         laborItems={laborItems}
         onAdd={onAddLabor}
         onRemove={onRemoveLabor}

@@ -19,6 +19,16 @@ const quoteSchema = new mongoose.Schema(
       make: String,
       model: String,
     },
+    // Company details are copied at save time so historical PDFs remain
+    // unchanged even when the shop later edits its Business Settings.
+    business: {
+      companyName: String,
+      address: String,
+      phone: String,
+      email: String,
+      quoteValidityDays: Number,
+      quoteNotes: String,
+    },
     items: [
       {
         partId: {

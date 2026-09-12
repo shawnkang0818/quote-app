@@ -1,13 +1,23 @@
 import { useState } from "react";
 
-const EMPTY_LABOR = {
-  description: "",
-  hours: "",
-  hourlyRate: "",
-};
+function createEmptyLabor(defaultHourlyRate) {
+  return {
+    description: "",
+    hours: "",
+    hourlyRate: String(defaultHourlyRate),
+  };
+}
 
-function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
-  const [labor, setLabor] = useState(EMPTY_LABOR);
+function LaborSection({
+  defaultHourlyRate,
+  laborItems,
+  onAdd,
+  onRemove,
+  onUpdate,
+}) {
+  const [labor, setLabor] = useState(() =>
+    createEmptyLabor(defaultHourlyRate)
+  );
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -18,7 +28,7 @@ function LaborSection({ laborItems, onAdd, onRemove, onUpdate }) {
     });
     // Keep invalid input visible so the user can correct it.
     if (wasAdded !== false) {
-      setLabor(EMPTY_LABOR);
+      setLabor(createEmptyLabor(defaultHourlyRate));
     }
   };
 

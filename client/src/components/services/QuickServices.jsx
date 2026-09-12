@@ -2,12 +2,18 @@ import { useState } from "react";
 import FavoriteJobs from "./FavoriteJobs";
 import { filterCatalogItems } from "../../utils/catalogSearch";
 
-function createLaborDraft(service) {
-  return service.labor.map((labor) => ({ ...labor }));
+function createLaborDraft(service, defaultHourlyRate) {
+  return service.labor.map((labor) => ({
+    ...labor,
+    // A template may override the shop default in the future; otherwise every
+    // quick job starts with the rate maintained in Business Settings.
+    hourlyRate: labor.hourlyRate ?? defaultHourlyRate,
+  }));
 }
 
 function QuickServices({
   favoriteServiceIds,
+  defaultHourlyRate,
   message,
   onApply,
   onToggleFavorite,
@@ -25,7 +31,7 @@ function QuickServices({
   // changing the active quote.
   const handleSelect = (service) => {
     setSelectedService(service);
-    setLaborDraft(createLaborDraft(service));
+    setLaborDraft(createLaborDraft(service, defaultHourlyRate));
   };
 
   const updateLaborDraft = (index, field, value) => {

@@ -3,6 +3,7 @@ import AppLayout from "./components/layout/AppLayout";
 import DashboardPage from "./pages/DashboardPage";
 import QuoteHistoryPage from "./pages/QuoteHistoryPage";
 import QuoteDetailPage from "./pages/QuoteDetailPage";
+import SettingsPage from "./pages/SettingsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
         <Route path="/" element={<DashboardPage />} />
         <Route path="/quotes" element={<QuoteHistoryPage />} />
         <Route path="/quotes/:quoteId" element={<QuoteDetailPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
     </Routes>

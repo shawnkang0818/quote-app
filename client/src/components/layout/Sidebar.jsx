@@ -3,6 +3,7 @@ import { NavLink } from "react-router-dom";
 const navigation = [
   { label: "Create Quote", to: "/", end: true },
   { label: "Quote History", to: "/quotes" },
+  { label: "Settings", to: "/settings" },
 ];
 
 function Sidebar() {

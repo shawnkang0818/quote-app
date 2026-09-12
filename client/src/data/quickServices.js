@@ -14,9 +14,8 @@ export const QUICK_SERVICES = [
       },
       { label: "Oil filter", searchTerms: ["oil filter"] },
     ],
-    labor: [
-      { description: "Oil change service", hours: 0.5, hourlyRate: 100 },
-    ],
+    // Hourly rate is supplied by Business Settings when the job is opened.
+    labor: [{ description: "Oil change service", hours: 0.5 }],
   },
   {
     id: "front-brakes",
@@ -33,7 +32,6 @@ export const QUICK_SERVICES = [
       {
         description: "Front brake pad replacement",
         hours: 1.5,
-        hourlyRate: 120,
       },
     ],
   },
@@ -43,9 +41,7 @@ export const QUICK_SERVICES = [
     shortCode: "TR",
     description: "Rotate and inspect four tires",
     parts: [],
-    labor: [
-      { description: "Tire rotation", hours: 0.5, hourlyRate: 100 },
-    ],
+    labor: [{ description: "Tire rotation", hours: 0.5 }],
   },
   {
     id: "battery",
@@ -53,9 +49,7 @@ export const QUICK_SERVICES = [
     shortCode: "BR",
     description: "Battery and installation labor",
     parts: [{ label: "Battery", searchTerms: ["battery"] }],
-    labor: [
-      { description: "Battery replacement", hours: 0.5, hourlyRate: 100 },
-    ],
+    labor: [{ description: "Battery replacement", hours: 0.5 }],
   },
   {
     id: "inspection",
@@ -63,9 +57,7 @@ export const QUICK_SERVICES = [
     shortCode: "VI",
     description: "General safety and maintenance inspection",
     parts: [],
-    labor: [
-      { description: "Vehicle inspection", hours: 1, hourlyRate: 100 },
-    ],
+    labor: [{ description: "Vehicle inspection", hours: 1 }],
   },
   {
     id: "air-filter",
@@ -78,8 +70,6 @@ export const QUICK_SERVICES = [
         searchTerms: ["engine air filter", "air filter"],
       },
     ],
-    labor: [
-      { description: "Air filter replacement", hours: 0.3, hourlyRate: 100 },
-    ],
+    labor: [{ description: "Air filter replacement", hours: 0.3 }],
   },
 ];

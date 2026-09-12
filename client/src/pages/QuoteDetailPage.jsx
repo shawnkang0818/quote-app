@@ -78,10 +78,13 @@ function QuoteDetailPage() {
     // jsPDF is relatively large, so load it only when a user requests a PDF.
     const { generateQuotePDF } = await import("../utils/generateQuotePDF");
     generateQuotePDF({
+      businessSettings: quote.business,
       customerName: quote.customerName,
       laborItems: quote.laborItems || [],
       quoteItems: quote.items,
       quoteNumber: quote.quoteNumber,
+      quoteDate: quote.createdAt,
+      taxRate: quote.taxRate,
       vehicle: quote.vehicle,
     });
   };

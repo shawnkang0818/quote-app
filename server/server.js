@@ -3,6 +3,9 @@ import cors from "cors";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Part from "./models/Part.js";
+import BusinessSettings, {
+  getBusinessSettings,
+} from "./models/BusinessSettings.js";
 import {
   adminAuth,
   createAdminSession,
@@ -11,10 +14,13 @@ import {
 import Quote from "./models/Quote.js";
 import {
   calculateQuoteTotals,
-  DEFAULT_TAX_RATE,
   isValidLaborItem,
   roundCurrency,
 } from "./utils/quoteCalculations.js";
+import {
+  createBusinessSnapshot,
+  normalizeBusinessSettings,
+} from "./utils/businessSettings.js";
 
 dotenv.config();
 
@@ -79,6 +85,35 @@ app.delete("/api/admin/session", adminAuth, (req, res) => {
 
 app.get("/api/admin/session", adminAuth, (_req, res) => {
   res.json({ authenticated: true });
+});
+
+// Reading presentation settings is public because the quote workspace needs
+// them before an administrator signs in. Updating them remains admin-only.
+app.get("/api/settings", async (_req, res) => {
+  try {
+    return res.json(await getBusinessSettings());
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.put("/api/settings", adminAuth, async (req, res) => {
+  try {
+    const normalized = normalizeBusinessSettings(req.body);
+    const settings = await BusinessSettings.findOneAndUpdate(
+      { key: "primary" },
+      { $set: normalized, $setOnInsert: { key: "primary" } },
+      {
+        returnDocument: "after",
+        upsert: true,
+        runValidators: true,
+        setDefaultsOnInsert: true,
+      }
+    );
+    return res.json(settings);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
 });
 
 app.get("/api/parts", async (req, res) => {
@@ -235,10 +270,12 @@ app.post("/api/quotes", async (req, res) => {
       hourlyRate: roundCurrency(item.hourlyRate),
       total: roundCurrency(Number(item.hours) * Number(item.hourlyRate)),
     }));
+    // Current business rules are authoritative for newly saved quotes.
+    const businessSettings = await getBusinessSettings();
     const totals = calculateQuoteTotals({
       items: cleanItems,
       laborItems: cleanLaborItems,
-      taxRate: DEFAULT_TAX_RATE,
+      taxRate: businessSettings.taxRate,
     });
     const quoteNumber = `QT-${Date.now()}-${Math.floor(
       1000 + Math.random() * 9000
@@ -248,6 +285,7 @@ app.post("/api/quotes", async (req, res) => {
       quoteNumber,
       customerName: req.body.customerName || "Walk-in Customer",
       vehicle: req.body.vehicle,
+      business: createBusinessSnapshot(businessSettings),
       items: cleanItems,
       laborItems: cleanLaborItems,
       partsSubtotal: totals.partsSubtotal,
