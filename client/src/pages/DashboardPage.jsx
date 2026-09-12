@@ -8,6 +8,7 @@ import FavoriteJobs from "../components/services/FavoriteJobs";
 import QuickServices from "../components/services/QuickServices";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
 import { useBusinessSettings } from "../hooks/useBusinessSettings";
+import { useCustomerLookup } from "../hooks/useCustomerLookup";
 import { useParts } from "../hooks/useParts";
 import { useQuote } from "../hooks/useQuote";
 import { useQuickServices } from "../hooks/useQuickServices";
@@ -33,6 +34,7 @@ function DashboardPage() {
   );
   const quote = useQuote(partsManager.parts, business.settings.taxRate);
   const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
+  const customerLookup = useCustomerLookup(vehicleForm.loadCustomerVehicle);
 
   const favoriteServices = quickServices.services.filter((service) =>
     favoriteJobs.favoriteServiceIds.includes(service.id)
@@ -88,6 +90,7 @@ function DashboardPage() {
       <div className="mb-5 grid items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(250px,0.8fr)]">
         <CustomerVehicleCard
           customer={vehicleForm.customer}
+          customerLookup={customerLookup}
           errorMessage={vehicleForm.vehicleError}
           makes={vehicleForm.makes}
           models={vehicleForm.models}

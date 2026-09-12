@@ -40,6 +40,61 @@ export function useVehicle(onDraftChange, quotePrefill) {
   );
   const [vehicleError, setVehicleError] = useState("");
 
+  // Load a returning customer directly inside the dashboard. The selected
+  // values appear immediately while complete NHTSA lists load for corrections.
+  const loadCustomerVehicle = async (savedCustomer = {}, savedVehicle = {}) => {
+    const nextCustomer = {
+      name: savedCustomer.name || "",
+      phone: savedCustomer.phone || "",
+      email: savedCustomer.email || "",
+    };
+    const nextVehicle = {
+      year: savedVehicle.year || "",
+      make: savedVehicle.make || "",
+      model: savedVehicle.model || "",
+      vin: savedVehicle.vin || "",
+      licensePlate: savedVehicle.licensePlate || "",
+      mileage: savedVehicle.mileage ?? "",
+    };
+
+    setCustomer(nextCustomer);
+    setVehicle(nextVehicle);
+    setMakes(nextVehicle.make ? [{ make: nextVehicle.make }] : []);
+    setModels(nextVehicle.model ? [{ model: nextVehicle.model }] : []);
+    setVehicleError("");
+    onDraftChange();
+
+    if (!nextVehicle.year) return;
+
+    try {
+      const makeOptions = await getVehicleMakes(nextVehicle.year);
+      setMakes(
+        nextVehicle.make &&
+          !makeOptions.some((option) => option.make === nextVehicle.make)
+          ? [{ make: nextVehicle.make }, ...makeOptions]
+          : makeOptions
+      );
+
+      if (nextVehicle.make) {
+        const modelOptions = await getVehicleModels(
+          nextVehicle.year,
+          nextVehicle.make
+        );
+        setModels(
+          nextVehicle.model &&
+            !modelOptions.some((option) => option.model === nextVehicle.model)
+            ? [{ model: nextVehicle.model }, ...modelOptions]
+            : modelOptions
+        );
+      }
+    } catch (error) {
+      console.error(error);
+      setVehicleError(
+        error.message || "Customer loaded, but vehicle options are unavailable."
+      );
+    }
+  };
+
   useEffect(() => {
     const { year, make, model } = initialValues.vehicle;
     if (!year) return undefined;
@@ -165,6 +220,7 @@ export function useVehicle(onDraftChange, quotePrefill) {
     handleVehicleDetailChange,
     makes,
     models,
+    loadCustomerVehicle,
     vehicle,
     vehicleError,
     years,
