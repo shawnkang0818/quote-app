@@ -18,6 +18,7 @@ async function backfillQuotes() {
     $or: [
       { quoteNumber: { $exists: false } },
       { partsSubtotal: { $exists: false } },
+      { status: { $exists: false } },
     ],
   });
 
@@ -49,6 +50,7 @@ async function backfillQuotes() {
     quote.taxRate = totals.taxRate;
     quote.taxAmount = totals.taxAmount;
     quote.total = totals.grandTotal;
+    quote.status = quote.status || "draft";
     await quote.save();
   }
 

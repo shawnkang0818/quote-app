@@ -9,6 +9,12 @@ const quoteSchema = new mongoose.Schema(
       index: true,
       sparse: true,
     },
+    status: {
+      type: String,
+      enum: ["draft", "final"],
+      default: "draft",
+      index: true,
+    },
     customerName: {
       type: String,
       trim: true,

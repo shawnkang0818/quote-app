@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { getStoredAdminToken } from "../services/authService";
-import { getQuote } from "../services/quotesService";
+import {
+  deleteQuote,
+  duplicateQuote,
+  getQuote,
+  updateQuoteStatus,
+} from "../services/quotesService";
 
 function money(value) {
   return new Intl.NumberFormat("en-US", {
@@ -12,9 +17,13 @@ function money(value) {
 
 function QuoteDetailPage() {
   const { quoteId } = useParams();
+  const navigate = useNavigate();
   const adminToken = getStoredAdminToken();
   const [quote, setQuote] = useState(null);
   const [error, setError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [actionMessage, setActionMessage] = useState("");
+  const [isWorking, setIsWorking] = useState(false);
 
   // Quote details contain customer information, so this page does not issue
   // a request unless an admin session already exists in the current tab.
@@ -89,6 +98,51 @@ function QuoteDetailPage() {
     });
   };
 
+  const handleStatusChange = async () => {
+    const nextStatus = (quote.status || "draft") === "final" ? "draft" : "final";
+    setIsWorking(true);
+    try {
+      const updated = await updateQuoteStatus(quoteId, nextStatus, adminToken);
+      setQuote(updated);
+      setActionError("");
+      setActionMessage(
+        nextStatus === "final" ? "Quote marked as final." : "Quote reopened as draft."
+      );
+    } catch (requestError) {
+      setActionError(requestError.message);
+    } finally {
+      setIsWorking(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    setIsWorking(true);
+    try {
+      // The backend revalidates stock and current prices before creating the copy.
+      const duplicate = await duplicateQuote(quoteId, adminToken);
+      navigate(`/quotes/${duplicate._id}`);
+    } catch (requestError) {
+      setActionError(requestError.message);
+      setIsWorking(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    const confirmed = window.confirm(
+      `Delete ${quote.quoteNumber || "this quote"}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setIsWorking(true);
+    try {
+      await deleteQuote(quoteId, adminToken);
+      navigate("/quotes");
+    } catch (requestError) {
+      setActionError(requestError.message);
+      setIsWorking(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -103,14 +157,73 @@ function QuoteDetailPage() {
             {new Date(quote.createdAt).toLocaleString()}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={handleGeneratePDF}
-          className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700"
-        >
-          Generate PDF
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleGeneratePDF}
+            className="rounded-xl bg-blue-600 px-4 py-2.5 font-semibold text-white hover:bg-blue-700"
+          >
+            Generate PDF
+          </button>
+          <button
+            type="button"
+            onClick={handleDuplicate}
+            disabled={isWorking}
+            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Duplicate as Draft
+          </button>
+        </div>
       </header>
+
+      <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+            Quote status
+          </p>
+          <span
+            className={`mt-2 inline-flex rounded-full px-3 py-1 text-sm font-semibold ${
+              (quote.status || "draft") === "final"
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-amber-100 text-amber-700"
+            }`}
+          >
+            {(quote.status || "draft") === "final" ? "Final" : "Draft"}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            onClick={handleStatusChange}
+            disabled={isWorking}
+            className="rounded-xl bg-slate-800 px-4 py-2.5 font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
+          >
+            {(quote.status || "draft") === "final"
+              ? "Reopen as Draft"
+              : "Mark as Final"}
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={isWorking}
+            className="rounded-xl bg-red-50 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+          >
+            Delete Quote
+          </button>
+        </div>
+      </section>
+
+      {actionMessage && (
+        <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          {actionMessage}
+        </p>
+      )}
+
+      {actionError && (
+        <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          {actionError}
+        </p>
+      )}
 
       <section className="grid gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm md:grid-cols-2">
         <div>

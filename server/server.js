@@ -212,89 +212,89 @@ app.get("/api/vehicles/models", async (req, res) => {
   }
 });
 
-// Save an immutable quote snapshot using current inventory data. Client-sent
-// part names, prices, totals, and tax are never treated as authoritative.
+// Build a quote from current inventory and business rules. Both new quotes and
+// duplicates use this path, so copied quotes cannot retain outdated prices.
+async function buildQuoteSnapshot(payload) {
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const laborItems = Array.isArray(payload.laborItems)
+    ? payload.laborItems
+    : [];
+
+  if (items.length === 0 && laborItems.length === 0) {
+    const error = new Error("A quote needs at least one part or labor item");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!laborItems.every(isValidLaborItem)) {
+    const error = new Error(
+      "Every labor item needs a description, hours above 0, and a valid hourly rate"
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  // Re-read every selected part to enforce current price, identity, and stock.
+  const cleanItems = await Promise.all(
+    items.map(async (item) => {
+      const part = await Part.findById(item.partId);
+      const requestedQuantity = Number(item.quoteQuantity);
+      if (!part) {
+        const error = new Error("A selected part no longer exists");
+        error.status = 400;
+        throw error;
+      }
+      if (
+        !Number.isInteger(requestedQuantity) ||
+        requestedQuantity < 1 ||
+        requestedQuantity > part.quantity
+      ) {
+        const error = new Error(`Only ${part.quantity} ${part.name} available`);
+        error.status = 400;
+        throw error;
+      }
+      return {
+        partId: part._id,
+        name: part.name,
+        price: roundCurrency(part.price),
+        quoteQuantity: requestedQuantity,
+      };
+    })
+  );
+  const cleanLaborItems = laborItems.map((item) => ({
+    description: item.description.trim(),
+    hours: Number(item.hours),
+    hourlyRate: roundCurrency(item.hourlyRate),
+    total: roundCurrency(Number(item.hours) * Number(item.hourlyRate)),
+  }));
+  const businessSettings = await getBusinessSettings();
+  const totals = calculateQuoteTotals({
+    items: cleanItems,
+    laborItems: cleanLaborItems,
+    taxRate: businessSettings.taxRate,
+  });
+
+  return {
+    quoteNumber: `QT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    status: "draft",
+    customerName: payload.customerName || "Walk-in Customer",
+    vehicle: payload.vehicle,
+    business: createBusinessSnapshot(businessSettings),
+    items: cleanItems,
+    laborItems: cleanLaborItems,
+    partsSubtotal: totals.partsSubtotal,
+    laborTotal: totals.laborTotal,
+    subtotal: totals.subtotal,
+    taxRate: totals.taxRate,
+    taxAmount: totals.taxAmount,
+    total: totals.grandTotal,
+  };
+}
+
+// Save an immutable draft using server-authoritative prices and calculations.
 app.post("/api/quotes", async (req, res) => {
   try {
-    const items = Array.isArray(req.body.items) ? req.body.items : [];
-    const laborItems = Array.isArray(req.body.laborItems)
-      ? req.body.laborItems
-      : [];
-
-    if (items.length === 0 && laborItems.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "A quote needs at least one part or labor item" });
-    }
-
-    if (!laborItems.every(isValidLaborItem)) {
-      return res.status(400).json({
-        message:
-          "Every labor item needs a description, hours above 0, and a valid hourly rate",
-      });
-    }
-
-    // Re-read every selected part to enforce current price, identity, and
-    // available stock even if a caller bypasses or modifies the frontend.
-    const cleanItems = await Promise.all(
-      items.map(async (item) => {
-        const part = await Part.findById(item.partId);
-        const requestedQuantity = Number(item.quoteQuantity);
-        if (!part) {
-          const error = new Error("A selected part no longer exists");
-          error.status = 400;
-          throw error;
-        }
-        if (
-          !Number.isInteger(requestedQuantity) ||
-          requestedQuantity < 1 ||
-          requestedQuantity > part.quantity
-        ) {
-          const error = new Error(
-            `Only ${part.quantity} ${part.name} available`
-          );
-          error.status = 400;
-          throw error;
-        }
-        return {
-          partId: part._id,
-          name: part.name,
-          price: roundCurrency(part.price),
-          quoteQuantity: requestedQuantity,
-        };
-      })
-    );
-    const cleanLaborItems = laborItems.map((item) => ({
-      description: item.description.trim(),
-      hours: Number(item.hours),
-      hourlyRate: roundCurrency(item.hourlyRate),
-      total: roundCurrency(Number(item.hours) * Number(item.hourlyRate)),
-    }));
-    // Current business rules are authoritative for newly saved quotes.
-    const businessSettings = await getBusinessSettings();
-    const totals = calculateQuoteTotals({
-      items: cleanItems,
-      laborItems: cleanLaborItems,
-      taxRate: businessSettings.taxRate,
-    });
-    const quoteNumber = `QT-${Date.now()}-${Math.floor(
-      1000 + Math.random() * 9000
-    )}`;
-
-    const savedQuote = await Quote.create({
-      quoteNumber,
-      customerName: req.body.customerName || "Walk-in Customer",
-      vehicle: req.body.vehicle,
-      business: createBusinessSnapshot(businessSettings),
-      items: cleanItems,
-      laborItems: cleanLaborItems,
-      partsSubtotal: totals.partsSubtotal,
-      laborTotal: totals.laborTotal,
-      subtotal: totals.subtotal,
-      taxRate: totals.taxRate,
-      taxAmount: totals.taxAmount,
-      total: totals.grandTotal,
-    });
+    const savedQuote = await Quote.create(await buildQuoteSnapshot(req.body));
     return res.status(201).json(savedQuote);
   } catch (err) {
     return sendDatabaseError(res, err);
@@ -340,6 +340,11 @@ app.get("/api/quotes", adminAuth, async (req, res) => {
         { "vehicle.model": vehicleRegex },
       ];
     }
+    if (["draft", "final"].includes(req.query.status)) {
+      // Until the migration is run, a missing status represents a legacy draft.
+      query.status =
+        req.query.status === "draft" ? { $in: ["draft", null] } : "final";
+    }
     if (req.query.from || req.query.to) {
       query.createdAt = {};
       if (req.query.from) {
@@ -382,6 +387,63 @@ app.get("/api/quotes/:id", adminAuth, async (req, res) => {
     return res.json(quote);
   } catch (err) {
     return sendDatabaseError(res, err);
+  }
+});
+
+// Status is the only mutable field on a saved quote snapshot.
+app.patch("/api/quotes/:id/status", adminAuth, async (req, res) => {
+  try {
+    if (!["draft", "final"].includes(req.body.status)) {
+      return res.status(400).json({ message: "Status must be draft or final" });
+    }
+    const quote = await Quote.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { returnDocument: "after", runValidators: true }
+    );
+    if (!quote) return res.status(404).json({ message: "Quote not found" });
+    return res.json(quote);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Duplicating reuses customer selections and labor but refreshes every part
+// price, shop setting, tax rate, and stock check before creating a new draft.
+app.post("/api/quotes/:id/duplicate", adminAuth, async (req, res) => {
+  try {
+    const source = await Quote.findById(req.params.id);
+    if (!source) return res.status(404).json({ message: "Quote not found" });
+
+    const duplicatePayload = {
+      customerName: source.customerName,
+      vehicle: source.vehicle,
+      items: source.items.map((item) => ({
+        partId: item.partId,
+        quoteQuantity: item.quoteQuantity,
+      })),
+      laborItems: source.laborItems.map((item) => ({
+        description: item.description,
+        hours: item.hours,
+        hourlyRate: item.hourlyRate,
+      })),
+    };
+    const duplicate = await Quote.create(
+      await buildQuoteSnapshot(duplicatePayload)
+    );
+    return res.status(201).json(duplicate);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.delete("/api/quotes/:id", adminAuth, async (req, res) => {
+  try {
+    const deleted = await Quote.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: "Quote not found" });
+    return res.status(204).end();
+  } catch (error) {
+    return sendDatabaseError(res, error);
   }
 });
 

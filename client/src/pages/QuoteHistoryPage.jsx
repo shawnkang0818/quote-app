@@ -23,6 +23,7 @@ function QuoteHistoryPage() {
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
+  const [statusSearch, setStatusSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     page: 1,
@@ -57,6 +58,7 @@ function QuoteHistoryPage() {
             vehicle: vehicleSearch.trim(),
             from: dateFrom,
             to: dateTo,
+            status: statusSearch,
             page,
             limit: 10,
           },
@@ -102,11 +104,17 @@ function QuoteHistoryPage() {
     dateTo,
     page,
     quoteNumberSearch,
+    statusSearch,
     vehicleSearch,
   ]);
 
   const hasFilters =
-    quoteNumberSearch || customerSearch || vehicleSearch || dateFrom || dateTo;
+    quoteNumberSearch ||
+    customerSearch ||
+    vehicleSearch ||
+    statusSearch ||
+    dateFrom ||
+    dateTo;
 
   const clearFilters = () => {
     setCustomerSearch("");
@@ -114,6 +122,7 @@ function QuoteHistoryPage() {
     setVehicleSearch("");
     setDateFrom("");
     setDateTo("");
+    setStatusSearch("");
     setPage(1);
   };
 
@@ -188,7 +197,7 @@ function QuoteHistoryPage() {
       {adminToken && (
         <>
       <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">
               Quote number
@@ -203,6 +212,24 @@ function QuoteHistoryPage() {
               placeholder="QT-..."
               className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
             />
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Quote status
+            </span>
+            <select
+              value={statusSearch}
+              onChange={(event) => {
+                setStatusSearch(event.target.value);
+                setPage(1);
+              }}
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            >
+              <option value="">All statuses</option>
+              <option value="draft">Draft</option>
+              <option value="final">Final</option>
+            </select>
           </label>
           <label className="block">
             <span className="mb-2 block text-sm font-medium text-slate-700">
@@ -317,9 +344,20 @@ function QuoteHistoryPage() {
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
-                      {quote.quoteNumber || "Legacy quote"}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
+                        {quote.quoteNumber || "Legacy quote"}
+                      </p>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          (quote.status || "draft") === "final"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-amber-100 text-amber-700"
+                        }`}
+                      >
+                        {(quote.status || "draft") === "final" ? "Final" : "Draft"}
+                      </span>
+                    </div>
                     <h2 className="text-lg font-bold text-slate-950">
                       {quote.customerName || "Walk-in Customer"}
                     </h2>

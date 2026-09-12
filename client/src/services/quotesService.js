@@ -36,3 +36,28 @@ export async function getQuote(id, token) {
     headers: adminHeaders(token),
   });
 }
+
+export async function updateQuoteStatus(id, status, token) {
+  return apiRequest(`/quotes/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    headers: {
+      ...adminHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function duplicateQuote(id, token) {
+  return apiRequest(`/quotes/${encodeURIComponent(id)}/duplicate`, {
+    method: "POST",
+    headers: adminHeaders(token),
+  });
+}
+
+export async function deleteQuote(id, token) {
+  return apiRequest(`/quotes/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+    headers: adminHeaders(token),
+  });
+}
