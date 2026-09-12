@@ -1,4 +1,5 @@
 function CustomerVehicleCard({
+  className = "",
   customer,
   errorMessage,
   makes,
@@ -12,7 +13,7 @@ function CustomerVehicleCard({
   years,
 }) {
   return (
-    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
       <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h2 className="text-xl font-semibold text-slate-950">
@@ -27,7 +28,7 @@ function CustomerVehicleCard({
         </span>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Customer name
@@ -122,27 +123,36 @@ function CustomerVehicleCard({
           </select>
         </label>
 
-        {[
-          ["licensePlate", "License plate", "ABC-1234"],
-          ["vin", "VIN", "17-character VIN"],
-          ["mileage", "Mileage", "Current mileage"],
-        ].map(([name, label, placeholder]) => (
-          <label key={name} className="block">
-            <span className="mb-2 block text-sm font-medium text-slate-700">
-              {label}
-            </span>
-            <input
-              type={name === "mileage" ? "number" : "text"}
-              name={name}
-              value={vehicle[name]}
-              onChange={onVehicleDetailChange}
-              min={name === "mileage" ? "0" : undefined}
-              placeholder={placeholder}
-              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-            />
-          </label>
-        ))}
       </div>
+
+      {/* Less frequently used identifiers stay available without dominating the form. */}
+      <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
+        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">
+          Vehicle identifiers & mileage
+        </summary>
+        <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-3">
+          {[
+            ["licensePlate", "License plate", "ABC-1234"],
+            ["vin", "VIN", "17-character VIN"],
+            ["mileage", "Mileage", "Current mileage"],
+          ].map(([name, label, placeholder]) => (
+            <label key={name} className="block">
+              <span className="mb-2 block text-sm font-medium text-slate-700">
+                {label}
+              </span>
+              <input
+                type={name === "mileage" ? "number" : "text"}
+                name={name}
+                value={vehicle[name]}
+                onChange={onVehicleDetailChange}
+                min={name === "mileage" ? "0" : undefined}
+                placeholder={placeholder}
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+              />
+            </label>
+          ))}
+        </div>
+      </details>
       {errorMessage && (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}

@@ -5,12 +5,14 @@ import PartsTable from "../components/inventory/PartsTable";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
 import QuoteSummary from "../components/quote/QuoteSummary";
 import PartsServicesSearch from "../components/search/PartsServicesSearch";
+import FavoriteJobs from "../components/services/FavoriteJobs";
 import QuickServices from "../components/services/QuickServices";
 import { useFavoriteJobs } from "../hooks/useFavoriteJobs";
 import { useBusinessSettings } from "../hooks/useBusinessSettings";
 import { useParts } from "../hooks/useParts";
 import { useQuote } from "../hooks/useQuote";
 import { useQuickServices } from "../hooks/useQuickServices";
+import { useServiceSelection } from "../hooks/useServiceSelection";
 import { useVehicle } from "../hooks/useVehicle";
 import { filterCatalogItems } from "../utils/catalogSearch";
 
@@ -27,6 +29,9 @@ function DashboardPage() {
   const business = useBusinessSettings();
   const partsManager = useParts();
   const quickServices = useQuickServices();
+  const serviceSelection = useServiceSelection(
+    business.settings.defaultHourlyRate
+  );
   const quote = useQuote(partsManager.parts, business.settings.taxRate);
   const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
 
@@ -38,6 +43,9 @@ function DashboardPage() {
     quickServices.services,
     catalogSearch
   ).length;
+  const favoriteServices = quickServices.services.filter((service) =>
+    favoriteJobs.favoriteServiceIds.includes(service.id)
+  );
 
   useEffect(() => {
     if (!quotePrefill) return;
@@ -49,18 +57,6 @@ function DashboardPage() {
 
   return (
     <div>
-      <header className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
-            Service workspace
-          </p>
-          <h1 className="mt-1 text-3xl font-bold text-slate-950">Create Quote</h1>
-        </div>
-        <p className="text-sm text-slate-500">
-          Customer → service → review → save
-        </p>
-      </header>
-
       {business.settingsError && (
         <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {business.settingsError}
@@ -83,35 +79,45 @@ function DashboardPage() {
         </div>
       )}
 
-      {/* Customer context stays first because it defines who the quote is for. */}
-      <CustomerVehicleCard
-        customer={vehicleForm.customer}
-        errorMessage={vehicleForm.vehicleError}
-        makes={vehicleForm.makes}
-        models={vehicleForm.models}
-        onCustomerChange={vehicleForm.handleCustomerChange}
-        onMakeChange={vehicleForm.handleMakeChange}
-        onModelChange={vehicleForm.handleModelChange}
-        onYearChange={vehicleForm.handleYearChange}
-        onVehicleDetailChange={vehicleForm.handleVehicleDetailChange}
-        vehicle={vehicleForm.vehicle}
-        years={vehicleForm.years}
-      />
+      {/* Customer context and favorite jobs are the two fastest entry points. */}
+      <div className="mb-5 grid items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(250px,0.8fr)]">
+        <CustomerVehicleCard
+          customer={vehicleForm.customer}
+          errorMessage={vehicleForm.vehicleError}
+          makes={vehicleForm.makes}
+          models={vehicleForm.models}
+          onCustomerChange={vehicleForm.handleCustomerChange}
+          onMakeChange={vehicleForm.handleMakeChange}
+          onModelChange={vehicleForm.handleModelChange}
+          onYearChange={vehicleForm.handleYearChange}
+          onVehicleDetailChange={vehicleForm.handleVehicleDetailChange}
+          vehicle={vehicleForm.vehicle}
+          years={vehicleForm.years}
+        />
+        <FavoriteJobs
+          services={favoriteServices}
+          onSelect={serviceSelection.selectService}
+        />
+      </div>
 
       <QuickServices
-        defaultHourlyRate={business.settings.defaultHourlyRate}
         errorMessage={quickServices.errorMessage}
         favoriteServiceIds={favoriteJobs.favoriteServiceIds}
         isLoading={quickServices.isLoading}
+        laborDraft={serviceSelection.laborDraft}
         message={quote.quickServiceMessage}
         onApply={quote.applyService}
+        onClearSelection={serviceSelection.clearSelection}
+        onSelectService={serviceSelection.selectService}
         onToggleFavorite={favoriteJobs.toggleFavorite}
+        onUpdateLaborDraft={serviceSelection.updateLaborDraft}
         searchQuery={catalogSearch}
+        selectedService={serviceSelection.selectedService}
         services={quickServices.services}
       />
 
       {/* The workbench mirrors the shop flow: find, build, then confirm totals. */}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(280px,0.85fr)_minmax(390px,1.2fr)_minmax(260px,0.7fr)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(240px,0.85fr)_minmax(360px,1.2fr)_minmax(240px,0.7fr)]">
         <div className="min-w-0 space-y-5">
           <PartsServicesSearch
             partCount={matchingPartCount}

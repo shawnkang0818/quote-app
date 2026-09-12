@@ -1,47 +1,26 @@
-import { useState } from "react";
-import FavoriteJobs from "./FavoriteJobs";
 import { filterCatalogItems } from "../../utils/catalogSearch";
-
-function createLaborDraft(service, defaultHourlyRate) {
-  return service.labor.map((labor) => ({
-    ...labor,
-    // A template may override the shop default in the future; otherwise every
-    // quick job starts with the rate maintained in Business Settings.
-    hourlyRate: labor.hourlyRate ?? defaultHourlyRate,
-  }));
-}
 
 function QuickServices({
   favoriteServiceIds,
-  defaultHourlyRate,
+  laborDraft,
   errorMessage,
   isLoading,
   message,
   onApply,
+  onClearSelection,
+  onSelectService,
   onToggleFavorite,
+  onUpdateLaborDraft,
   searchQuery,
+  selectedService,
   services,
 }) {
-  const [selectedService, setSelectedService] = useState(null);
-  const [laborDraft, setLaborDraft] = useState([]);
-  const favoriteServices = services.filter((service) =>
-    favoriteServiceIds.includes(service.id)
-  );
   const filteredServices = filterCatalogItems(services, searchQuery);
 
   // Selecting a template opens its editable defaults instead of immediately
   // changing the active quote.
   const handleSelect = (service) => {
-    setSelectedService(service);
-    setLaborDraft(createLaborDraft(service, defaultHourlyRate));
-  };
-
-  const updateLaborDraft = (index, field, value) => {
-    setLaborDraft((items) =>
-      items.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item
-      )
-    );
+    onSelectService(service);
   };
 
   const handleApply = (event) => {
@@ -56,8 +35,7 @@ function QuickServices({
         hourlyRate: Number(labor.hourlyRate),
       })),
     });
-    setSelectedService(null);
-    setLaborDraft([]);
+    onClearSelection();
   };
 
   return (
@@ -75,8 +53,6 @@ function QuickServices({
           Choose a job, adjust labor, and add it to the quote.
         </p>
       </div>
-
-      <FavoriteJobs services={favoriteServices} onSelect={handleSelect} />
 
       {errorMessage ? (
         <p className="mt-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -174,7 +150,7 @@ function QuickServices({
                       type="number"
                       value={labor.hours}
                       onChange={(event) =>
-                        updateLaborDraft(index, "hours", event.target.value)
+                        onUpdateLaborDraft(index, "hours", event.target.value)
                       }
                       min="0.1"
                       step="0.01"
@@ -188,7 +164,7 @@ function QuickServices({
                       type="number"
                       value={labor.hourlyRate}
                       onChange={(event) =>
-                        updateLaborDraft(
+                        onUpdateLaborDraft(
                           index,
                           "hourlyRate",
                           event.target.value
@@ -215,8 +191,7 @@ function QuickServices({
             <button
               type="button"
               onClick={() => {
-                setSelectedService(null);
-                setLaborDraft([]);
+                onClearSelection();
               }}
               className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-300 transition hover:bg-slate-50"
             >
