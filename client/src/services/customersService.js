@@ -29,3 +29,11 @@ export function updateCustomer(customerId, customer, token) {
     body: JSON.stringify(customer),
   });
 }
+
+export function getCustomerDetail(customerId, page, token) {
+  const query = new URLSearchParams({ page: String(page), limit: "10" });
+  return apiRequest(
+    `/customers/${encodeURIComponent(customerId)}?${query.toString()}`,
+    { headers: { Authorization: `Bearer ${token}` } }
+  );
+}

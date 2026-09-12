@@ -354,6 +354,49 @@ app.put("/api/customers/:id", adminAuth, async (req, res) => {
   }
 });
 
+// A customer detail response combines the managed record with paginated quote
+// history. Older quotes fall back to their saved contact snapshot when they do
+// not yet contain customerRecordId.
+app.get("/api/customers/:id", adminAuth, async (req, res) => {
+  try {
+    const customer = await Customer.findById(req.params.id);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(
+      25,
+      Math.max(1, Number.parseInt(req.query.limit, 10) || 10)
+    );
+    const matches = [{ customerRecordId: customer._id }];
+    if (customer.phone) matches.push({ "customer.phone": customer.phone });
+    if (customer.email) matches.push({ "customer.email": customer.email });
+
+    const quoteQuery = { $or: matches };
+    const [quotes, total] = await Promise.all([
+      Quote.find(quoteQuery)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      Quote.countDocuments(quoteQuery),
+    ]);
+
+    return res.json({
+      customer,
+      quotes,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 
 // Proxy vehicle makes through our server so provider details and timeout
@@ -528,6 +571,10 @@ app.post("/api/quotes", async (req, res) => {
           }
         }
         await record.save();
+        // Store the relationship after the customer upsert succeeds. This does
+        // not alter the immutable customer/contact snapshot on the quote.
+        savedQuote.customerRecordId = record._id;
+        await savedQuote.save();
       } catch (customerError) {
         console.error("Customer record sync failed:", customerError.message);
       }

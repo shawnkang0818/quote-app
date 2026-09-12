@@ -25,6 +25,13 @@ const quoteSchema = new mongoose.Schema(
       phone: String,
       email: String,
     },
+    // New quotes keep a durable link to the managed customer record. Contact
+    // snapshots above remain unchanged for historical accuracy.
+    customerRecordId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      index: true,
+    },
     vehicle: {
       year: String,
       make: String,

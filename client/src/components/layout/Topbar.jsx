@@ -13,7 +13,9 @@ function Topbar() {
   const location = useLocation();
   const title = location.pathname.startsWith("/quotes/")
     ? "Quote Details"
-    : pageTitles[location.pathname] ?? "Garage Quote";
+    : location.pathname.startsWith("/customers/")
+      ? "Customer Details"
+      : pageTitles[location.pathname] ?? "Garage Quote";
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">

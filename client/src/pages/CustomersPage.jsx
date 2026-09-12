@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AdminAccess from "../components/admin/AdminAccess";
 import CustomerForm from "../components/customer/CustomerForm";
 import { getStoredAdminToken, loginAdmin } from "../services/authService";
@@ -212,6 +212,12 @@ function CustomersPage() {
                           : "Unknown"}
                       </p>
                       <div className="flex flex-wrap gap-2">
+                        <Link
+                          to={`/customers/${customer._id}`}
+                          className="rounded-lg bg-slate-800 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-slate-900"
+                        >
+                          View details
+                        </Link>
                         <button
                           type="button"
                           onClick={() => {
