@@ -166,7 +166,7 @@ export function useQuote(parts, taxRate) {
     markDraftChanged();
   };
 
-  const generatePDF = async ({ businessSettings, customerName, vehicle }) => {
+  const generatePDF = async ({ businessSettings, customer, vehicle }) => {
     if (!laborItems.every(isValidLaborItem)) {
       setQuoteError("Every labor item needs hours above 0 and a valid rate.");
       return;
@@ -176,7 +176,8 @@ export function useQuote(parts, taxRate) {
       // PDF dependencies are loaded only on demand to keep initial startup fast.
       const { generateQuotePDF } = await import("../utils/generateQuotePDF");
       generateQuotePDF({
-        customerName,
+        customer,
+        customerName: customer.name,
         businessSettings,
         laborItems,
         quoteItems,
@@ -191,7 +192,7 @@ export function useQuote(parts, taxRate) {
     }
   };
 
-  const saveQuote = async ({ customerName, vehicle }) => {
+  const saveQuote = async ({ customer, vehicle }) => {
     if (quoteItems.length === 0 && laborItems.length === 0) {
       setQuoteError("Add at least one part or labor item.");
       return;
@@ -207,7 +208,8 @@ export function useQuote(parts, taxRate) {
       // The server re-reads inventory and calculates authoritative totals;
       // these values describe the requested quote rather than trusting the UI.
       const savedQuote = await createQuote({
-        customerName: customerName || "Walk-in Customer",
+        customer,
+        customerName: customer.name || "Walk-in Customer",
         vehicle,
         items: quoteItems.map((item) => ({
           partId: item._id,

@@ -133,7 +133,7 @@ function DashboardPage() {
       )}
 
       <CustomerVehicleCard
-        customerName={vehicleForm.customerName}
+        customer={vehicleForm.customer}
         errorMessage={vehicleForm.vehicleError}
         makes={vehicleForm.makes}
         models={vehicleForm.models}
@@ -141,6 +141,7 @@ function DashboardPage() {
         onMakeChange={vehicleForm.handleMakeChange}
         onModelChange={vehicleForm.handleModelChange}
         onYearChange={vehicleForm.handleYearChange}
+        onVehicleDetailChange={vehicleForm.handleVehicleDetailChange}
         vehicle={vehicleForm.vehicle}
         years={vehicleForm.years}
       />
@@ -206,7 +207,7 @@ function DashboardPage() {
           onGeneratePDF={() =>
             quote.generatePDF({
               businessSettings: business.settings,
-              customerName: vehicleForm.customerName,
+              customer: vehicleForm.customer,
               vehicle: vehicleForm.vehicle,
             })
           }
@@ -215,7 +216,7 @@ function DashboardPage() {
           onRemoveLabor={quote.removeLabor}
           onSaveQuote={() =>
             quote.saveQuote({
-              customerName: vehicleForm.customerName,
+              customer: vehicleForm.customer,
               vehicle: vehicleForm.vehicle,
             })
           }

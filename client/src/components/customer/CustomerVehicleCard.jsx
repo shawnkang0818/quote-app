@@ -1,5 +1,5 @@
 function CustomerVehicleCard({
-  customerName,
+  customer,
   errorMessage,
   makes,
   models,
@@ -7,6 +7,7 @@ function CustomerVehicleCard({
   onMakeChange,
   onModelChange,
   onYearChange,
+  onVehicleDetailChange,
   vehicle,
   years,
 }) {
@@ -21,16 +22,41 @@ function CustomerVehicleCard({
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Customer name
           </span>
           <input
             type="text"
+            name="name"
             placeholder="Walk-in Customer"
-            value={customerName}
+            value={customer.name}
             onChange={onCustomerChange}
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Phone</span>
+          <input
+            type="tel"
+            name="phone"
+            value={customer.phone}
+            onChange={onCustomerChange}
+            placeholder="(555) 123-4567"
+            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+          />
+        </label>
+
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-slate-700">Email</span>
+          <input
+            type="email"
+            name="email"
+            value={customer.email}
+            onChange={onCustomerChange}
+            placeholder="customer@example.com"
             className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </label>
@@ -90,6 +116,27 @@ function CustomerVehicleCard({
             ))}
           </select>
         </label>
+
+        {[
+          ["licensePlate", "License plate", "ABC-1234"],
+          ["vin", "VIN", "17-character VIN"],
+          ["mileage", "Mileage", "Current mileage"],
+        ].map(([name, label, placeholder]) => (
+          <label key={name} className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              {label}
+            </span>
+            <input
+              type={name === "mileage" ? "number" : "text"}
+              name={name}
+              value={vehicle[name]}
+              onChange={onVehicleDetailChange}
+              min={name === "mileage" ? "0" : undefined}
+              placeholder={placeholder}
+              className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+        ))}
       </div>
       {errorMessage && (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">

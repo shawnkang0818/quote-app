@@ -20,10 +20,18 @@ const quoteSchema = new mongoose.Schema(
       trim: true,
       default: "Walk-in Customer",
     },
+    customer: {
+      name: String,
+      phone: String,
+      email: String,
+    },
     vehicle: {
       year: String,
       make: String,
       model: String,
+      vin: String,
+      licensePlate: String,
+      mileage: Number,
     },
     // Company details are copied at save time so historical PDFs remain
     // unchanged even when the shop later edits its Business Settings.

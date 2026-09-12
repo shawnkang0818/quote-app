@@ -88,6 +88,7 @@ function QuoteDetailPage() {
     const { generateQuotePDF } = await import("../utils/generateQuotePDF");
     generateQuotePDF({
       businessSettings: quote.business,
+      customer: quote.customer,
       customerName: quote.customerName,
       laborItems: quote.laborItems || [],
       quoteItems: quote.items,
@@ -229,11 +230,29 @@ function QuoteDetailPage() {
         <div>
           <p className="text-xs font-semibold uppercase text-slate-500">Customer</p>
           <p className="mt-1 font-semibold text-slate-900">{quote.customerName}</p>
+          {(quote.customer?.phone || quote.customer?.email) && (
+            <p className="mt-1 text-sm text-slate-500">
+              {[quote.customer.phone, quote.customer.email]
+                .filter(Boolean)
+                .join(" • ")}
+            </p>
+          )}
         </div>
         <div>
           <p className="text-xs font-semibold uppercase text-slate-500">Vehicle</p>
           <p className="mt-1 font-semibold text-slate-900">
             {vehicle || "Not specified"}
+          </p>
+          <p className="mt-1 text-sm text-slate-500">
+            {[
+              quote.vehicle?.licensePlate &&
+                `Plate: ${quote.vehicle.licensePlate}`,
+              quote.vehicle?.vin && `VIN: ${quote.vehicle.vin}`,
+              quote.vehicle?.mileage != null &&
+                `Mileage: ${Number(quote.vehicle.mileage).toLocaleString()}`,
+            ]
+              .filter(Boolean)
+              .join(" • ") || "No additional vehicle identifiers"}
           </p>
         </div>
       </section>

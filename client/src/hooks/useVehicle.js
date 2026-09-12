@@ -11,18 +11,28 @@ const years = Array.from(
 );
 
 export function useVehicle(onDraftChange) {
-  const [customerName, setCustomerName] = useState("");
+  const [customer, setCustomer] = useState({ name: "", phone: "", email: "" });
   const [vehicle, setVehicle] = useState({
     year: "",
     make: "",
     model: "",
+    vin: "",
+    licensePlate: "",
+    mileage: "",
   });
   const [makes, setMakes] = useState([]);
   const [models, setModels] = useState([]);
   const [vehicleError, setVehicleError] = useState("");
 
   const handleCustomerChange = (event) => {
-    setCustomerName(event.target.value);
+    const { name, value } = event.target;
+    setCustomer((current) => ({ ...current, [name]: value }));
+    onDraftChange();
+  };
+
+  const handleVehicleDetailChange = (event) => {
+    const { name, value } = event.target;
+    setVehicle((current) => ({ ...current, [name]: value }));
     onDraftChange();
   };
 
@@ -31,7 +41,12 @@ export function useVehicle(onDraftChange) {
   const handleYearChange = async (event) => {
     const selectedYear = event.target.value;
 
-    setVehicle({ year: selectedYear, make: "", model: "" });
+    setVehicle((current) => ({
+      ...current,
+      year: selectedYear,
+      make: "",
+      model: "",
+    }));
     setMakes([]);
     setModels([]);
     onDraftChange();
@@ -75,11 +90,13 @@ export function useVehicle(onDraftChange) {
   };
 
   return {
-    customerName,
+    customer,
+    customerName: customer.name,
     handleCustomerChange,
     handleMakeChange,
     handleModelChange,
     handleYearChange,
+    handleVehicleDetailChange,
     makes,
     models,
     vehicle,

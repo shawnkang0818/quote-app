@@ -12,6 +12,7 @@ import {
   revokeAdminSession,
 } from "./middleware/adminAuth.js";
 import Quote from "./models/Quote.js";
+import Customer from "./models/Customer.js";
 import {
   calculateQuoteTotals,
   isValidLaborItem,
@@ -21,6 +22,13 @@ import {
   createBusinessSnapshot,
   normalizeBusinessSettings,
 } from "./utils/businessSettings.js";
+import {
+  findMatchingVehicleIndex,
+  normalizeCustomer,
+  normalizeEmail,
+  normalizePhone,
+  normalizeVehicle,
+} from "./utils/customerRecords.js";
 
 dotenv.config();
 
@@ -166,6 +174,44 @@ app.delete("/api/parts/:id", adminAuth, async (req, res) => {
   }
 });
 
+// Customer records contain private contact and vehicle identifiers, so search
+// access is restricted until full employee accounts replace the admin session.
+app.get("/api/customers", adminAuth, async (req, res) => {
+  try {
+    const search = String(req.query.search || "").trim();
+    const query = {};
+    if (search) {
+      const escaped = search.replace(/[.*+?^\${}()|[\]\\]/g, "\\$&");
+      const regex = { $regex: escaped, $options: "i" };
+      const normalizedPhone = normalizePhone(search);
+      const normalizedEmail = normalizeEmail(search);
+      query.$or = [
+        { name: regex },
+        { phone: regex },
+        { email: regex },
+        // Normalized fields make searches work even when the user omits phone
+        // punctuation or types an email with different capitalization.
+        ...(normalizedPhone
+          ? [{ phoneNormalized: { $regex: normalizedPhone } }]
+          : []),
+        ...(normalizedEmail
+          ? [{ emailNormalized: { $regex: escaped, $options: "i" } }]
+          : []),
+        { "vehicles.vin": regex },
+        { "vehicles.licensePlate": regex },
+        { "vehicles.make": regex },
+        { "vehicles.model": regex },
+      ];
+    }
+    const customers = await Customer.find(query)
+      .sort({ lastVisitAt: -1, name: 1 })
+      .limit(50);
+    return res.json(customers);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
 const PORT = process.env.PORT || 5001;
 
 // Proxy vehicle makes through our server so provider details and timeout
@@ -268,6 +314,8 @@ async function buildQuoteSnapshot(payload) {
     total: roundCurrency(Number(item.hours) * Number(item.hourlyRate)),
   }));
   const businessSettings = await getBusinessSettings();
+  const customer = normalizeCustomer(payload.customer, payload.customerName);
+  const vehicle = normalizeVehicle(payload.vehicle);
   const totals = calculateQuoteTotals({
     items: cleanItems,
     laborItems: cleanLaborItems,
@@ -277,8 +325,9 @@ async function buildQuoteSnapshot(payload) {
   return {
     quoteNumber: `QT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
     status: "draft",
-    customerName: payload.customerName || "Walk-in Customer",
-    vehicle: payload.vehicle,
+    customerName: customer.name,
+    customer,
+    vehicle,
     business: createBusinessSnapshot(businessSettings),
     items: cleanItems,
     laborItems: cleanLaborItems,
@@ -295,6 +344,50 @@ async function buildQuoteSnapshot(payload) {
 app.post("/api/quotes", async (req, res) => {
   try {
     const savedQuote = await Quote.create(await buildQuoteSnapshot(req.body));
+
+    // Contact details create or refresh a returning-customer record. Failure to
+    // sync this convenience index never invalidates the quote already saved.
+    const customer = savedQuote.customer;
+    if (customer?.phone || customer?.email) {
+      try {
+        const phoneNormalized = normalizePhone(customer.phone);
+        const emailNormalized = normalizeEmail(customer.email);
+        const match = [];
+        if (phoneNormalized) match.push({ phoneNormalized });
+        if (emailNormalized) match.push({ emailNormalized });
+
+        let record = await Customer.findOne({ $or: match });
+        if (!record) record = new Customer();
+        record.name = customer.name;
+        record.phone = customer.phone;
+        record.phoneNormalized = phoneNormalized;
+        record.email = customer.email;
+        record.emailNormalized = emailNormalized;
+        record.lastVisitAt = savedQuote.createdAt;
+        record.lastQuoteId = savedQuote._id;
+
+        const selectedVehicle = savedQuote.vehicle?.toObject
+          ? savedQuote.vehicle.toObject()
+          : savedQuote.vehicle;
+        if (
+          selectedVehicle &&
+          (selectedVehicle.year || selectedVehicle.vin || selectedVehicle.licensePlate)
+        ) {
+          const vehicleIndex = findMatchingVehicleIndex(
+            record.vehicles,
+            selectedVehicle
+          );
+          if (vehicleIndex >= 0) {
+            Object.assign(record.vehicles[vehicleIndex], selectedVehicle);
+          } else {
+            record.vehicles.push(selectedVehicle);
+          }
+        }
+        await record.save();
+      } catch (customerError) {
+        console.error("Customer record sync failed:", customerError.message);
+      }
+    }
     return res.status(201).json(savedQuote);
   } catch (err) {
     return sendDatabaseError(res, err);
@@ -417,6 +510,9 @@ app.post("/api/quotes/:id/duplicate", adminAuth, async (req, res) => {
 
     const duplicatePayload = {
       customerName: source.customerName,
+      // Preserve the structured contact snapshot when a historical quote is
+      // duplicated. Legacy quotes still fall back to customerName.
+      customer: source.customer,
       vehicle: source.vehicle,
       items: source.items.map((item) => ({
         partId: item.partId,

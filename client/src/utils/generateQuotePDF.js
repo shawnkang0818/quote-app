@@ -14,6 +14,7 @@ const DEFAULT_COMPANY = {
 
 export function generateQuotePDF({
   businessSettings = {},
+  customer = {},
   customerName,
   laborItems = [],
   quoteItems = [],
@@ -41,7 +42,10 @@ export function generateQuotePDF({
     validUntil.getDate() + Number(company.quoteValidityDays || 30)
   );
   const contact = [company.phone, company.email].filter(Boolean).join(" | ");
-  const displayCustomerName = customerName || "Walk-in Customer";
+  const displayCustomerName = customer.name || customerName || "Walk-in Customer";
+  const customerContact = [customer.phone, customer.email]
+    .filter(Boolean)
+    .join(" | ");
   const vehicleText = [vehicle.year, vehicle.make, vehicle.model]
     .filter(Boolean)
     .join(" ");
@@ -71,11 +75,21 @@ export function generateQuotePDF({
   doc.text("Bill To:", 14, 48);
   doc.setFont("helvetica", "normal");
   doc.text(displayCustomerName, 14, 54);
+  if (customerContact) doc.text(customerContact, 14, 60);
 
   doc.setFont("helvetica", "bold");
-  doc.text("Vehicle:", 14, 62);
+  doc.text("Vehicle:", 14, 68);
   doc.setFont("helvetica", "normal");
-  doc.text(vehicleText || "Not specified", 14, 68);
+  doc.text(vehicleText || "Not specified", 14, 74);
+  const vehicleDetails = [
+    vehicle.licensePlate && `Plate: ${vehicle.licensePlate}`,
+    vehicle.vin && `VIN: ${vehicle.vin}`,
+    vehicle.mileage !== undefined && vehicle.mileage !== "" &&
+      `Mileage: ${Number(vehicle.mileage).toLocaleString()}`,
+  ]
+    .filter(Boolean)
+    .join(" | ");
+  if (vehicleDetails) doc.text(vehicleDetails, 14, 80);
 
   // Parts and labor share one client-facing table, while their separate source
   // arrays are preserved for accurate subtotal calculations and history data.
@@ -98,7 +112,7 @@ export function generateQuotePDF({
   });
 
   autoTable(doc, {
-    startY: 76,
+    startY: 88,
     head: [["#", "Part / Labor", "Unit Price", "Qty/Hrs", "Line Total"]],
     body: tableBody,
     theme: "grid",
