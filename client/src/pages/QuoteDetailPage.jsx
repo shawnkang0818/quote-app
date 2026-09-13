@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { getStoredAdminToken } from "../services/authService";
 import {
   deleteQuote,
@@ -17,16 +17,21 @@ function money(value) {
 
 function QuoteDetailPage() {
   const { quoteId } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const adminToken = getStoredAdminToken();
-  const [quote, setQuote] = useState(null);
+  const createdQuote = location.state?.createdQuote;
+  const [quote, setQuote] = useState(() =>
+    createdQuote?._id === quoteId ? createdQuote : null
+  );
   const [error, setError] = useState("");
   const [actionError, setActionError] = useState("");
   const [actionMessage, setActionMessage] = useState("");
   const [isWorking, setIsWorking] = useState(false);
 
-  // Quote details contain customer information, so this page does not issue
-  // a request unless an admin session already exists in the current tab.
+  // Quote history remains protected. A creator may only review the exact
+  // snapshot returned by their just-completed save; refreshing or opening a
+  // different stored quote still requires an admin session.
   useEffect(() => {
     if (!adminToken) return;
 
@@ -35,7 +40,7 @@ function QuoteDetailPage() {
       .catch((requestError) => setError(requestError.message));
   }, [adminToken, quoteId]);
 
-  if (!adminToken) {
+  if (!adminToken && !quote) {
     return (
       <section className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-800">
         <p>Admin access is required. Unlock Quote History first.</p>
@@ -150,8 +155,11 @@ function QuoteDetailPage() {
     <div className="space-y-6">
       <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <Link to="/quotes" className="text-sm font-semibold text-blue-600">
-            ← Quote History
+          <Link
+            to={adminToken ? "/quotes" : "/"}
+            className="text-sm font-semibold text-blue-600"
+          >
+            {adminToken ? "← Quote History" : "← Create Quote"}
           </Link>
           <h1 className="mt-2 text-3xl font-bold text-slate-950">
             {quote.quoteNumber || "Legacy quote"}
@@ -168,14 +176,16 @@ function QuoteDetailPage() {
           >
             Generate PDF
           </button>
-          <button
-            type="button"
-            onClick={handleDuplicate}
-            disabled={isWorking}
-            className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            Duplicate as Draft
-          </button>
+          {adminToken && (
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              disabled={isWorking}
+              className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Duplicate as Draft
+            </button>
+          )}
         </div>
       </header>
 
@@ -194,26 +204,28 @@ function QuoteDetailPage() {
             {(quote.status || "draft") === "final" ? "Final" : "Draft"}
           </span>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={handleStatusChange}
-            disabled={isWorking}
-            className="rounded-xl bg-slate-800 px-4 py-2.5 font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
-          >
-            {(quote.status || "draft") === "final"
-              ? "Reopen as Draft"
-              : "Mark as Final"}
-          </button>
-          <button
-            type="button"
-            onClick={handleDelete}
-            disabled={isWorking}
-            className="rounded-xl bg-red-50 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
-          >
-            Delete Quote
-          </button>
-        </div>
+        {adminToken && (
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleStatusChange}
+              disabled={isWorking}
+              className="rounded-xl bg-slate-800 px-4 py-2.5 font-semibold text-white hover:bg-slate-900 disabled:opacity-50"
+            >
+              {(quote.status || "draft") === "final"
+                ? "Reopen as Draft"
+                : "Mark as Final"}
+            </button>
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isWorking}
+              className="rounded-xl bg-red-50 px-4 py-2.5 font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+            >
+              Delete Quote
+            </button>
+          </div>
+        )}
       </section>
 
       {actionMessage && (
@@ -250,7 +262,7 @@ function QuoteDetailPage() {
               quote.vehicle?.licensePlate &&
                 `Plate: ${quote.vehicle.licensePlate}`,
               quote.vehicle?.vin && `VIN: ${quote.vehicle.vin}`,
-              quote.vehicle?.mileage != null &&
+              Number(quote.vehicle?.mileage) > 0 &&
                 `Mileage: ${Number(quote.vehicle.mileage).toLocaleString()}`,
             ]
               .filter(Boolean)

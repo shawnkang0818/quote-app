@@ -5,7 +5,9 @@ function QuoteSummary({
   laborItems,
   onClear,
   onGeneratePDF,
+  onOpenSavedQuote,
   onSaveQuote,
+  onStartNewQuote,
   onStatusChange,
   quoteItems,
   quoteNumber,
@@ -66,9 +68,27 @@ function QuoteSummary({
       )}
 
       {saveMessage && (
-        <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          {saveMessage}
-        </p>
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-3">
+          <p className="text-sm font-medium text-emerald-800">{saveMessage}</p>
+
+          {/* Make the next shop action obvious after a successful save. */}
+          <div className="mt-3 grid gap-2">
+            <button
+              type="button"
+              onClick={onOpenSavedQuote}
+              className="rounded-lg bg-emerald-700 px-3 py-2 text-sm font-semibold text-white transition hover:bg-emerald-800"
+            >
+              Open Saved Quote
+            </button>
+            <button
+              type="button"
+              onClick={onStartNewQuote}
+              className="rounded-lg border border-emerald-300 bg-white px-3 py-2 text-sm font-semibold text-emerald-800 transition hover:bg-emerald-100"
+            >
+              Start New Quote
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Primary business actions stay visible in the sticky summary column. */}

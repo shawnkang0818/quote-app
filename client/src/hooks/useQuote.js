@@ -22,6 +22,8 @@ export function useQuote(parts, taxRate) {
   const [quoteError, setQuoteError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
+  const [savedQuote, setSavedQuote] = useState(null);
+  const [savedQuoteId, setSavedQuoteId] = useState("");
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
   const [quoteStatus, setQuoteStatus] = useState("draft");
   const [quickServiceMessage, setQuickServiceMessage] = useState(null);
@@ -36,6 +38,8 @@ export function useQuote(parts, taxRate) {
   // updated quote to be saved as a new record.
   const markDraftChanged = () => {
     setSaveMessage("");
+    setSavedQuote(null);
+    setSavedQuoteId("");
     setSavedQuoteNumber("");
   };
 
@@ -288,6 +292,10 @@ export function useQuote(parts, taxRate) {
 
       setQuoteError("");
       setSaveMessage(`Quote ${savedQuote.quoteNumber} saved successfully.`);
+      // Keep the permanent database ID so the success state can open the
+      // exact saved record without searching Quote History first.
+      setSavedQuote(savedQuote);
+      setSavedQuoteId(savedQuote._id);
       setSavedQuoteNumber(savedQuote.quoteNumber);
     } catch (error) {
       console.error(error);
@@ -318,6 +326,8 @@ export function useQuote(parts, taxRate) {
     removePart,
     saveMessage,
     saveQuote,
+    savedQuote,
+    savedQuoteId,
     savedQuoteNumber,
     totals,
     updateNote,

@@ -234,12 +234,20 @@ function DashboardPage() {
               vehicle: vehicleForm.vehicle,
             })
           }
+          onOpenSavedQuote={() =>
+            navigate(`/quotes/${quote.savedQuoteId}`, {
+              // The creator may review this newly saved snapshot immediately.
+              // Returning through Quote History still requires admin access.
+              state: { createdQuote: quote.savedQuote },
+            })
+          }
           onSaveQuote={() =>
             quote.saveQuote({
               customer: vehicleForm.customer,
               vehicle: vehicleForm.vehicle,
             })
           }
+          onStartNewQuote={handleNewQuote}
           quoteItems={quote.quoteItems}
           quoteNumber={quote.savedQuoteNumber}
           quoteStatus={quote.quoteStatus}
