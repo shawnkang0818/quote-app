@@ -4,6 +4,7 @@ import {
   calculateQuoteTotals,
   isValidCustomItem,
   isValidLaborItem,
+  normalizeQuoteStatus,
 } from "./quoteCalculations.js";
 
 test("server recalculates the authoritative quote total", () => {
@@ -61,4 +62,13 @@ test("validates one-off custom quote items", () => {
     }),
     false
   );
+});
+
+test("normalizes supported quote statuses and rejects unknown values", () => {
+  assert.equal(normalizeQuoteStatus(), "draft");
+  assert.equal(normalizeQuoteStatus(" FINAL "), "final");
+  assert.throws(() => normalizeQuoteStatus("pending"), {
+    message: "Status must be draft or final",
+    status: 400,
+  });
 });

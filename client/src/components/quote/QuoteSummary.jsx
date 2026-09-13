@@ -6,8 +6,10 @@ function QuoteSummary({
   onClear,
   onGeneratePDF,
   onSaveQuote,
+  onStatusChange,
   quoteItems,
   quoteNumber,
+  quoteStatus,
   saveMessage,
   totals,
 }) {
@@ -107,15 +109,22 @@ function QuoteSummary({
             {quoteNumber || "Assigned after save"}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
-            isSaved
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-amber-100 text-amber-700"
-          }`}
-        >
-          {isSaved ? "Saved" : "Draft"}
-        </span>
+        <label className="shrink-0">
+          <span className="sr-only">Quote status</span>
+          <select
+            value={quoteStatus}
+            onChange={(event) => onStatusChange(event.target.value)}
+            disabled={isSaved}
+            className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold outline-none transition disabled:cursor-not-allowed ${
+              quoteStatus === "final"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-amber-200 bg-amber-50 text-amber-700"
+            }`}
+          >
+            <option value="draft">Draft</option>
+            <option value="final">Final</option>
+          </select>
+        </label>
       </div>
     </aside>
   );

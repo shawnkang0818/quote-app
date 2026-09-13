@@ -37,6 +37,20 @@ export function isValidCustomItem(item) {
   );
 }
 
+// New quotes may be saved as working drafts or finalized customer-facing
+// snapshots. Reject every other value before it reaches the database model.
+export function normalizeQuoteStatus(status = "draft") {
+  const normalized = String(status).trim().toLowerCase();
+
+  if (!["draft", "final"].includes(normalized)) {
+    const error = new Error("Status must be draft or final");
+    error.status = 400;
+    throw error;
+  }
+
+  return normalized;
+}
+
 export function calculateQuoteTotals({
   items = [],
   laborItems = [],

@@ -23,6 +23,7 @@ export function useQuote(parts, taxRate) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
+  const [quoteStatus, setQuoteStatus] = useState("draft");
   const [quickServiceMessage, setQuickServiceMessage] = useState(null);
   const [notes, setNotes] = useState({
     customerRequest: "",
@@ -36,6 +37,12 @@ export function useQuote(parts, taxRate) {
   const markDraftChanged = () => {
     setSaveMessage("");
     setSavedQuoteNumber("");
+  };
+
+  const updateQuoteStatus = (status) => {
+    if (!["draft", "final"].includes(status)) return;
+    setQuoteStatus(status);
+    markDraftChanged();
   };
 
   const addPart = (part) => {
@@ -212,6 +219,7 @@ export function useQuote(parts, taxRate) {
     setQuoteError("");
     setQuickServiceMessage(null);
     setNotes({ customerRequest: "", technicianNotes: "" });
+    setQuoteStatus("draft");
     markDraftChanged();
   };
 
@@ -274,6 +282,7 @@ export function useQuote(parts, taxRate) {
           hourlyRate,
         })),
         notes,
+        status: quoteStatus,
       });
 
       setQuoteError("");
@@ -303,6 +312,7 @@ export function useQuote(parts, taxRate) {
     quickServiceMessage,
     quoteError,
     quoteItems,
+    quoteStatus,
     removeLabor,
     removePart,
     saveMessage,
@@ -311,5 +321,6 @@ export function useQuote(parts, taxRate) {
     totals,
     updateNote,
     updateLabor,
+    updateQuoteStatus,
   };
 }

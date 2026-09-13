@@ -242,8 +242,10 @@ function DashboardPage() {
           }
           quoteItems={quote.quoteItems}
           quoteNumber={quote.savedQuoteNumber}
+          quoteStatus={quote.quoteStatus}
           saveMessage={quote.saveMessage}
           totals={quote.totals}
+          onStatusChange={quote.updateQuoteStatus}
         />
       </div>
     </div>

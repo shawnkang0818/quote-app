@@ -19,6 +19,7 @@ import {
   calculateQuoteTotals,
   isValidCustomItem,
   isValidLaborItem,
+  normalizeQuoteStatus,
   roundCurrency,
 } from "./utils/quoteCalculations.js";
 import {
@@ -585,7 +586,7 @@ async function buildQuoteSnapshot(payload) {
 
   return {
     quoteNumber: `QT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    status: "draft",
+    status: normalizeQuoteStatus(payload.status),
     customerName: customer.name,
     customer,
     vehicle,
@@ -602,7 +603,7 @@ async function buildQuoteSnapshot(payload) {
   };
 }
 
-// Save an immutable draft using server-authoritative prices and calculations.
+// Save an immutable quote snapshot using server-authoritative prices and totals.
 app.post("/api/quotes", async (req, res) => {
   try {
     const quoteSnapshot = await buildQuoteSnapshot(req.body);
