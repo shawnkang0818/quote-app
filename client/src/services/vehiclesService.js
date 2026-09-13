@@ -11,3 +11,9 @@ export function getVehicleModels(year, make) {
     )}`
   );
 }
+
+// VIN decoding is proxied by our backend so provider errors and response
+// normalization remain consistent with the other vehicle lookups.
+export function decodeVin(vin) {
+  return apiRequest(`/vehicles/decode-vin?vin=${encodeURIComponent(vin)}`);
+}

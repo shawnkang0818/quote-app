@@ -37,6 +37,10 @@ import {
   slugifyServiceName,
 } from "./utils/quickServices.js";
 import { normalizeQuoteNotes } from "./utils/quoteNotes.js";
+import {
+  normalizeVin,
+  normalizeVinDecodeResult,
+} from "./utils/vinDecoder.js";
 
 dotenv.config();
 
@@ -399,6 +403,29 @@ app.get("/api/customers/:id", adminAuth, async (req, res) => {
 });
 
 const PORT = process.env.PORT || 5001;
+
+// Decode a VIN through NHTSA and expose only the fields the quote form needs.
+// Keeping this request server-side gives all vehicle lookups consistent
+// timeout handling and lets the frontend remain independent of the provider.
+app.get("/api/vehicles/decode-vin", async (req, res) => {
+  try {
+    const vin = normalizeVin(req.query.vin);
+    const data = await fetchJsonWithTimeout(
+      `https://vpic.nhtsa.dot.gov/api/vehicles/DecodeVinValues/${encodeURIComponent(
+        vin
+      )}?format=json`
+    );
+    return res.json(normalizeVinDecodeResult(data, vin));
+  } catch (error) {
+    const status = error.status || (error.name === "AbortError" ? 504 : 502);
+    return res.status(status).json({
+      error:
+        error.name === "AbortError"
+          ? "Vehicle provider timed out"
+          : error.message,
+    });
+  }
+});
 
 // Proxy vehicle makes through our server so provider details and timeout
 // behavior stay out of the React application.

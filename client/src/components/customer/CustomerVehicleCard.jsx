@@ -4,6 +4,7 @@ function CustomerVehicleCard({
   className = "",
   customer,
   errorMessage,
+  isDecodingVin,
   makes,
   models,
   customerLookup,
@@ -12,7 +13,9 @@ function CustomerVehicleCard({
   onModelChange,
   onYearChange,
   onVehicleDetailChange,
+  onDecodeVin,
   vehicle,
+  vinMessage,
   years,
 }) {
   return (
@@ -146,27 +149,66 @@ function CustomerVehicleCard({
           Vehicle identifiers & mileage
         </summary>
         <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-3">
-          {[
-            ["licensePlate", "License plate", "ABC-1234"],
-            ["vin", "VIN", "17-character VIN"],
-            ["mileage", "Mileage", "Current mileage"],
-          ].map(([name, label, placeholder]) => (
-            <label key={name} className="block">
-              <span className="mb-2 block text-sm font-medium text-slate-700">
-                {label}
-              </span>
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              License plate
+            </span>
+            <input
+              type="text"
+              name="licensePlate"
+              value={vehicle.licensePlate}
+              onChange={onVehicleDetailChange}
+              placeholder="ABC-1234"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
+
+          <div className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              VIN
+            </span>
+            <div className="flex gap-2">
               <input
-                type={name === "mileage" ? "number" : "text"}
-                name={name}
-                value={vehicle[name]}
+                type="text"
+                name="vin"
+                aria-label="VIN"
+                value={vehicle.vin}
                 onChange={onVehicleDetailChange}
-                min={name === "mileage" ? "0" : undefined}
-                placeholder={placeholder}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                maxLength={17}
+                placeholder="17-character VIN"
+                className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-white px-4 py-2.5 font-mono text-sm uppercase outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
               />
-            </label>
-          ))}
+              <button
+                type="button"
+                onClick={onDecodeVin}
+                disabled={vehicle.vin.length !== 17 || isDecodingVin}
+                className="rounded-xl bg-blue-600 px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                {isDecodingVin ? "Decoding..." : "Decode"}
+              </button>
+            </div>
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block text-sm font-medium text-slate-700">
+              Mileage
+            </span>
+            <input
+              type="number"
+              name="mileage"
+              value={vehicle.mileage}
+              onChange={onVehicleDetailChange}
+              min="0"
+              placeholder="Current mileage"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            />
+          </label>
         </div>
+        {vinMessage && (
+          <p className="border-t border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {vinMessage}
+          </p>
+        )}
       </details>
       {errorMessage && (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import {
+  decodeVin,
   getVehicleMakes,
   getVehicleModels,
 } from "../services/vehiclesService";
@@ -39,6 +40,8 @@ export function useVehicle(onDraftChange, quotePrefill) {
     initialValues.vehicle.model ? [{ model: initialValues.vehicle.model }] : []
   );
   const [vehicleError, setVehicleError] = useState("");
+  const [isDecodingVin, setIsDecodingVin] = useState(false);
+  const [vinMessage, setVinMessage] = useState("");
 
   // Load a returning customer directly inside the dashboard. The selected
   // values appear immediately while complete NHTSA lists load for corrections.
@@ -153,8 +156,73 @@ export function useVehicle(onDraftChange, quotePrefill) {
 
   const handleVehicleDetailChange = (event) => {
     const { name, value } = event.target;
-    setVehicle((current) => ({ ...current, [name]: value }));
+    // VIN input is normalized as the employee types, while the other vehicle
+    // identifiers retain their original formatting.
+    const nextValue =
+      name === "vin"
+        ? value.toUpperCase().replace(/\s/g, "").slice(0, 17)
+        : value;
+    setVehicle((current) => ({ ...current, [name]: nextValue }));
+    if (name === "vin") {
+      setVinMessage("");
+      setVehicleError("");
+    }
     onDraftChange();
+  };
+
+  const handleVinDecode = async () => {
+    setIsDecodingVin(true);
+    setVehicleError("");
+    setVinMessage("");
+
+    try {
+      const decoded = await decodeVin(vehicle.vin);
+      const nextVehicle = {
+        ...vehicle,
+        vin: decoded.vin,
+        year: decoded.year,
+        make: decoded.make,
+        model: decoded.model,
+      };
+
+      // Show decoded values immediately; complete option lists load afterward
+      // so every field can still be corrected manually.
+      setVehicle(nextVehicle);
+      setMakes(decoded.make ? [{ make: decoded.make }] : []);
+      setModels(decoded.model ? [{ model: decoded.model }] : []);
+      setVinMessage(
+        decoded.warning ||
+          `Decoded ${[decoded.year, decoded.make, decoded.model]
+            .filter(Boolean)
+            .join(" ")}.`
+      );
+      onDraftChange();
+
+      if (decoded.year) {
+        const makeOptions = await getVehicleMakes(decoded.year);
+        setMakes(
+          decoded.make &&
+            !makeOptions.some((option) => option.make === decoded.make)
+            ? [{ make: decoded.make }, ...makeOptions]
+            : makeOptions
+        );
+
+        if (decoded.make) {
+          const modelOptions = await getVehicleModels(decoded.year, decoded.make);
+          setModels(
+            decoded.model &&
+              !modelOptions.some((option) => option.model === decoded.model)
+              ? [{ model: decoded.model }, ...modelOptions]
+              : modelOptions
+          );
+        }
+      }
+    } catch (error) {
+      console.error(error);
+      setVehicleError(error.message || "Unable to decode this VIN.");
+    } finally {
+      setIsDecodingVin(false);
+    }
   };
 
   // Vehicle dropdowns are dependent: a new year invalidates both make and
@@ -214,15 +282,23 @@ export function useVehicle(onDraftChange, quotePrefill) {
     customer,
     customerName: customer.name,
     handleCustomerChange,
+    handleVinDecode,
     handleMakeChange,
     handleModelChange,
     handleYearChange,
     handleVehicleDetailChange,
     makes,
     models,
+    isDecodingVin,
     loadCustomerVehicle,
     vehicle,
     vehicleError,
-    years,
+    vinMessage,
+    // A decoded classic vehicle may predate the normal 1990 quick-select
+    // range. Include its year so the controlled select can still display it.
+    years:
+      vehicle.year && !years.some((year) => String(year) === vehicle.year)
+        ? [vehicle.year, ...years]
+        : years,
   };
 }

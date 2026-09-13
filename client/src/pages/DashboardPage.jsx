@@ -92,6 +92,7 @@ function DashboardPage() {
           customer={vehicleForm.customer}
           customerLookup={customerLookup}
           errorMessage={vehicleForm.vehicleError}
+          isDecodingVin={vehicleForm.isDecodingVin}
           makes={vehicleForm.makes}
           models={vehicleForm.models}
           onCustomerChange={vehicleForm.handleCustomerChange}
@@ -99,7 +100,9 @@ function DashboardPage() {
           onModelChange={vehicleForm.handleModelChange}
           onYearChange={vehicleForm.handleYearChange}
           onVehicleDetailChange={vehicleForm.handleVehicleDetailChange}
+          onDecodeVin={vehicleForm.handleVinDecode}
           vehicle={vehicleForm.vehicle}
+          vinMessage={vehicleForm.vinMessage}
           years={vehicleForm.years}
         />
         <FavoriteJobs
