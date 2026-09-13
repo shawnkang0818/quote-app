@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   estimateQuickServicePrice,
+  formatQuickServiceEstimate,
   getQuickServiceTheme,
 } from "./quickServicePresentation.js";
 
@@ -34,4 +35,15 @@ test("reports missing parts while retaining known labor cost", () => {
 test("assigns a stable visual theme from the service identity", () => {
   assert.equal(getQuickServiceTheme({ key: "front-brakes" }).icon, "brake");
   assert.equal(getQuickServiceTheme({ name: "Custom Tune Up" }).icon, "service");
+});
+
+test("labels incomplete estimates so missing parts are not implied as included", () => {
+  assert.equal(
+    formatQuickServiceEstimate({ amount: 60, missingPartCount: 1 }),
+    "From $60.00 + parts"
+  );
+  assert.equal(
+    formatQuickServiceEstimate({ amount: 64.99, missingPartCount: 0 }),
+    "From $64.99"
+  );
 });

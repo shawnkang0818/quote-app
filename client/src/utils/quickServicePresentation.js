@@ -37,6 +37,13 @@ export function estimateQuickServicePrice(service, parts, defaultHourlyRate) {
   };
 }
 
+export function formatQuickServiceEstimate(estimate) {
+  // Make incomplete package previews explicit instead of presenting labor-only
+  // estimates as if they already included every required part.
+  const price = `From $${Number(estimate.amount || 0).toFixed(2)}`;
+  return estimate.missingPartCount > 0 ? `${price} + parts` : price;
+}
+
 const THEMES = {
   oil: { icon: "oil", accent: "text-amber-500", soft: "bg-amber-50" },
   brake: { icon: "brake", accent: "text-red-500", soft: "bg-red-50" },

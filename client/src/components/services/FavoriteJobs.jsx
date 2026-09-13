@@ -1,5 +1,8 @@
 import ServiceIcon from "./ServiceIcon";
-import { getQuickServiceTheme } from "../../utils/quickServicePresentation";
+import {
+  formatQuickServiceEstimate,
+  getQuickServiceTheme,
+} from "../../utils/quickServicePresentation";
 
 function FavoriteJobs({ services, onSelect }) {
   return (
@@ -40,7 +43,7 @@ function FavoriteJobs({ services, onSelect }) {
                   {service.name}
                 </span>
                 <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
-                  From ${service.estimate.amount.toFixed(2)}
+                  {formatQuickServiceEstimate(service.estimate)}
                 </span>
               </button>
             );

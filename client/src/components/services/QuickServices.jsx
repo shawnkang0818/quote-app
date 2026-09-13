@@ -1,5 +1,8 @@
 import ServiceIcon from "./ServiceIcon";
-import { getQuickServiceTheme } from "../../utils/quickServicePresentation";
+import {
+  formatQuickServiceEstimate,
+  getQuickServiceTheme,
+} from "../../utils/quickServicePresentation";
 
 function QuickServices({
   errorMessage,
@@ -64,7 +67,7 @@ function QuickServices({
                       {service.name}
                     </span>
                     <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
-                      From ${service.estimate.amount.toFixed(2)}
+                      {formatQuickServiceEstimate(service.estimate)}
                     </span>
                   </span>
                 </button>
