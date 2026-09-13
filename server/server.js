@@ -41,6 +41,7 @@ import {
   normalizeVin,
   normalizeVinDecodeResult,
 } from "./utils/vinDecoder.js";
+import { normalizePart } from "./utils/parts.js";
 
 dotenv.config();
 
@@ -227,11 +228,7 @@ app.get("/api/parts", async (req, res) => {
 
 app.post("/api/parts", adminAuth, async (req, res) => {
   try {
-    const saved = await Part.create({
-      name: req.body.name,
-      price: req.body.price,
-      quantity: req.body.quantity,
-    });
+    const saved = await Part.create(normalizePart(req.body));
     res.status(201).json(saved);
   } catch (err) {
     sendDatabaseError(res, err);
@@ -242,7 +239,7 @@ app.put("/api/parts/:id", adminAuth, async (req, res) => {
   try {
     const updatedPart = await Part.findByIdAndUpdate(
       req.params.id,
-      { name: req.body.name, price: req.body.price, quantity: req.body.quantity },
+      normalizePart(req.body),
       { new: true, runValidators: true }
     );
     if (!updatedPart) {

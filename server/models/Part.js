@@ -7,6 +7,24 @@ const partSchema = new mongoose.Schema({
     trim: true,
     minlength: 1,
   },
+  partNumber: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    default: "",
+  },
+  brand: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    default: "",
+  },
+  category: {
+    type: String,
+    trim: true,
+    maxlength: 80,
+    default: "",
+  },
   price: {
     type: Number,
     required: true,
@@ -19,6 +37,15 @@ const partSchema = new mongoose.Schema({
     validate: {
       validator: Number.isInteger,
       message: "Quantity must be a whole number",
+    },
+  },
+  lowStockThreshold: {
+    type: Number,
+    default: 5,
+    min: 0,
+    validate: {
+      validator: Number.isInteger,
+      message: "Low-stock threshold must be a whole number",
     },
   },
 }, { timestamps: true });

@@ -1,9 +1,20 @@
 import { useMemo } from "react";
 import { filterCatalogItems } from "../../utils/catalogSearch";
 
-function stockClasses(quantity) {
-  if (Number(quantity) <= 0) return "bg-red-100 text-red-700";
-  if (Number(quantity) <= 5) return "bg-amber-100 text-amber-700";
+function getStockState(part) {
+  const quantity = Number(part.quantity);
+  const threshold = Number(part.lowStockThreshold ?? 5);
+
+  if (quantity <= 0) return { label: "Out of stock", tone: "empty" };
+  if (quantity <= threshold) {
+    return { label: `${quantity} · Low`, tone: "low" };
+  }
+  return { label: `${quantity} in stock`, tone: "ready" };
+}
+
+function stockClasses(tone) {
+  if (tone === "empty") return "bg-red-100 text-red-700";
+  if (tone === "low") return "bg-amber-100 text-amber-700";
   return "bg-emerald-100 text-emerald-700";
 }
 
@@ -45,16 +56,17 @@ function InventoryTable({ errorMessage, onDelete, onEdit, parts, searchQuery }) 
         </p>
       ) : filteredParts.length === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
-          No inventory items match this search.
+          No inventory items match this name, part number, brand, or category.
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-sm">
+          <table className="w-full min-w-[900px] text-sm">
             <thead className="bg-slate-100 text-slate-700">
               <tr>
                 <th className="rounded-l-xl px-4 py-3 text-left font-semibold">
-                  Name
+                  Part details
                 </th>
+                <th className="px-4 py-3 text-left font-semibold">Category</th>
                 <th className="px-4 py-3 text-left font-semibold">Price</th>
                 <th className="px-4 py-3 text-left font-semibold">Stock</th>
                 <th className="px-4 py-3 text-left font-semibold">Updated</th>
@@ -64,10 +76,24 @@ function InventoryTable({ errorMessage, onDelete, onEdit, parts, searchQuery }) 
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredParts.map((part) => (
-                <tr key={part._id} className="transition hover:bg-slate-50">
-                  <td className="px-4 py-4 font-medium text-slate-900">
-                    {part.name}
+              {filteredParts.map((part) => {
+                const stock = getStockState(part);
+                const metadata = [part.brand, part.partNumber]
+                  .filter(Boolean)
+                  .join(" · ");
+
+                return (
+                  <tr key={part._id} className="transition hover:bg-slate-50">
+                  <td className="px-4 py-4">
+                    <p className="font-medium text-slate-900">{part.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {metadata || "No brand or part number"}
+                    </p>
+                  </td>
+                  <td className="px-4 py-4">
+                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                      {part.category || "Uncategorized"}
+                    </span>
                   </td>
                   <td className="px-4 py-4 text-slate-600">
                     ${Number(part.price).toFixed(2)}
@@ -75,10 +101,10 @@ function InventoryTable({ errorMessage, onDelete, onEdit, parts, searchQuery }) 
                   <td className="px-4 py-4">
                     <span
                       className={`rounded-full px-2.5 py-1 text-xs font-semibold ${stockClasses(
-                        part.quantity
+                        stock.tone
                       )}`}
                     >
-                      {part.quantity}
+                      {stock.label}
                     </span>
                   </td>
                   <td className="px-4 py-4 text-slate-500">
@@ -104,8 +130,9 @@ function InventoryTable({ errorMessage, onDelete, onEdit, parts, searchQuery }) 
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

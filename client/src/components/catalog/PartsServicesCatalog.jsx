@@ -195,7 +195,9 @@ function PartsServicesCatalog({
         {showParts &&
           filteredParts.map((part) => {
             const outOfStock = Number(part.quantity) <= 0;
-            const lowStock = !outOfStock && Number(part.quantity) <= 5;
+            const lowStock =
+              !outOfStock &&
+              Number(part.quantity) <= Number(part.lowStockThreshold ?? 5);
             const theme = getQuickServiceTheme(part);
             const reference = part.partNumber || part.sku || "Inventory part";
 
@@ -214,7 +216,9 @@ function PartsServicesCatalog({
                     {part.name}
                   </p>
                   <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-[11px]">
-                    <span className="truncate text-slate-500">{reference}</span>
+                    <span className="truncate text-slate-500">
+                      {[part.brand, reference].filter(Boolean).join(" · ")}
+                    </span>
                     <span aria-hidden="true" className="text-slate-300">·</span>
                     <span
                       className={`shrink-0 font-medium ${

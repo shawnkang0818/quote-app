@@ -8,8 +8,12 @@ import {
 
 const EMPTY_PART_FORM = {
   name: "",
+  partNumber: "",
+  brand: "",
+  category: "",
   price: "",
   quantity: "",
+  lowStockThreshold: "5",
 };
 
 export function useParts(adminToken) {
@@ -62,8 +66,12 @@ export function useParts(adminToken) {
     setEditingPartId(part._id);
     setFormData({
       name: part.name,
+      partNumber: part.partNumber || "",
+      brand: part.brand || "",
+      category: part.category || "",
       price: part.price,
       quantity: part.quantity,
+      lowStockThreshold: part.lowStockThreshold ?? 5,
     });
     setInventoryError("");
   };
@@ -89,8 +97,12 @@ export function useParts(adminToken) {
 
     const partData = {
       name: formData.name,
+      partNumber: formData.partNumber,
+      brand: formData.brand,
+      category: formData.category,
       price: Number(formData.price),
       quantity: Number(formData.quantity),
+      lowStockThreshold: Number(formData.lowStockThreshold),
     };
 
     try {
