@@ -27,3 +27,23 @@ test("quote status accepts only draft or final", () => {
 
   assert.ok(validationError.errors.status);
 });
+
+test("stores custom quote lines without an inventory reference", () => {
+  const quote = createValidQuote({
+    items: [
+      {
+        isCustom: true,
+        name: "Shop supplies",
+        price: 12.5,
+        quoteQuantity: 1,
+      },
+    ],
+    partsSubtotal: 12.5,
+    subtotal: 12.5,
+    total: 13.59,
+  });
+
+  assert.equal(quote.validateSync(), undefined);
+  assert.equal(quote.items[0].partId, undefined);
+  assert.equal(quote.items[0].isCustom, true);
+});

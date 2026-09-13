@@ -24,7 +24,7 @@ function QuoteSummary({
       {/* Keep totals in one predictable place so the builder can focus on editing. */}
       <dl className="space-y-3 py-5 text-sm">
         <div className="flex items-center justify-between text-slate-600">
-          <dt>Parts total</dt>
+          <dt>Parts & custom</dt>
           <dd className="font-medium text-slate-900">
             ${totals.partsSubtotal.toFixed(2)}
           </dd>

@@ -96,7 +96,7 @@ export function generateQuotePDF({
   // arrays are preserved for accurate subtotal calculations and history data.
   const tableBody = quoteItems.map((item, index) => [
     index + 1,
-    item.name,
+    item.isCustom ? `Custom: ${item.name}` : item.name,
     `$${Number(item.price).toFixed(2)}`,
     item.quoteQuantity,
     `$${(Number(item.price) * item.quoteQuantity).toFixed(2)}`,
@@ -114,7 +114,7 @@ export function generateQuotePDF({
 
   autoTable(doc, {
     startY: 88,
-    head: [["#", "Part / Labor", "Unit Price", "Qty/Hrs", "Line Total"]],
+    head: [["#", "Item / Labor", "Unit Price", "Qty/Hrs", "Line Total"]],
     body: tableBody,
     theme: "grid",
     styles: {

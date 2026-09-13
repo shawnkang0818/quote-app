@@ -65,6 +65,43 @@ export function useQuote(parts, taxRate) {
     markDraftChanged();
   };
 
+  const addCustomItem = ({ name, price, quoteQuantity }) => {
+    const cleanName = name.trim();
+    const numericPrice = Number(price);
+    const numericQuantity = Number(quoteQuantity);
+
+    if (
+      !cleanName ||
+      cleanName.length > 160 ||
+      !Number.isFinite(numericPrice) ||
+      numericPrice < 0 ||
+      !Number.isInteger(numericQuantity) ||
+      numericQuantity < 1 ||
+      numericQuantity > 999
+    ) {
+      setQuoteError(
+        "Enter a custom item name, valid price, and whole-number quantity."
+      );
+      return false;
+    }
+
+    // A local ID lets custom rows use the same editing controls as inventory
+    // parts without pretending to have a MongoDB inventory reference.
+    setQuoteItems((items) => [
+      ...items,
+      {
+        _id: crypto.randomUUID(),
+        isCustom: true,
+        name: cleanName,
+        price: numericPrice,
+        quoteQuantity: numericQuantity,
+      },
+    ]);
+    setQuoteError("");
+    markDraftChanged();
+    return true;
+  };
+
   const removePart = (id) => {
     setQuoteItems((items) => items.filter((item) => item._id !== id));
     markDraftChanged();
@@ -74,6 +111,7 @@ export function useQuote(parts, taxRate) {
     const selectedItem = quoteItems.find((item) => item._id === id);
     if (
       selectedItem &&
+      !selectedItem.isCustom &&
       selectedItem.quoteQuantity >= Number(selectedItem.quantity)
     ) {
       setQuoteError(
@@ -217,14 +255,15 @@ export function useQuote(parts, taxRate) {
 
     setIsSaving(true);
     try {
-      // The server re-reads inventory and calculates authoritative totals;
-      // these values describe the requested quote rather than trusting the UI.
+      // The server re-reads inventory, validates custom lines, and calculates
+      // authoritative totals rather than trusting browser calculations.
       const savedQuote = await createQuote({
         customer,
         customerName: customer.name || "Walk-in Customer",
         vehicle,
         items: quoteItems.map((item) => ({
-          partId: item._id,
+          partId: item.isCustom ? undefined : item._id,
+          isCustom: item.isCustom === true,
           name: item.name,
           price: item.price,
           quoteQuantity: item.quoteQuantity,
@@ -249,6 +288,7 @@ export function useQuote(parts, taxRate) {
   };
 
   return {
+    addCustomItem,
     addLabor,
     addPart,
     applyService,

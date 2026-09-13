@@ -284,7 +284,10 @@ function QuoteDetailPage() {
         <div className="mt-4 divide-y divide-slate-200">
           {quote.items.map((item) => (
             <div key={item._id} className="flex justify-between py-3">
-              <span>{item.name} × {item.quoteQuantity}</span>
+              <span>
+                {item.isCustom ? "Custom: " : ""}
+                {item.name} × {item.quoteQuantity}
+              </span>
               <span className="font-semibold">
                 {money(item.price * item.quoteQuantity)}
               </span>
@@ -298,7 +301,7 @@ function QuoteDetailPage() {
           ))}
         </div>
         <div className="ml-auto mt-5 max-w-sm space-y-2 border-t border-slate-200 pt-4 text-sm">
-          <div className="flex justify-between"><span>Parts</span><span>{money(partsSubtotal)}</span></div>
+          <div className="flex justify-between"><span>Parts & custom</span><span>{money(partsSubtotal)}</span></div>
           <div className="flex justify-between"><span>Labor</span><span>{money(laborTotal)}</span></div>
           <div className="flex justify-between"><span>Tax</span><span>{money(quote.taxAmount)}</span></div>
           <div className="flex justify-between text-lg font-bold"><span>Total</span><span>{money(quote.total)}</span></div>

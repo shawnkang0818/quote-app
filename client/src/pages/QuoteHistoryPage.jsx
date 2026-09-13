@@ -406,6 +406,7 @@ function QuoteHistoryPage() {
                         className="flex items-center justify-between gap-4 text-sm"
                       >
                         <span className="text-slate-600">
+                          {item.isCustom ? "Custom: " : ""}
                           {item.name} × {item.quoteQuantity}
                         </span>
                         <span className="font-medium text-slate-900">

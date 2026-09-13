@@ -70,6 +70,9 @@ const quoteSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           ref: "Part",
         },
+        // Custom lines have no inventory reference and retain their quoted
+        // name and price; normal part lines remain server-authoritative.
+        isCustom: { type: Boolean, default: false },
         name: { type: String, required: true, trim: true },
         price: { type: Number, required: true, min: 0 },
         quoteQuantity: { type: Number, required: true, min: 1 },

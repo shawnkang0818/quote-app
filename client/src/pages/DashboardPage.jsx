@@ -168,6 +168,7 @@ function DashboardPage() {
           defaultHourlyRate={business.settings.defaultHourlyRate}
           laborItems={quote.laborItems}
           notes={quote.notes}
+          onAddCustomItem={quote.addCustomItem}
           onAddLabor={quote.addLabor}
           onDecreaseQuantity={quote.decreaseQuantity}
           onIncreaseQuantity={quote.increaseQuantity}

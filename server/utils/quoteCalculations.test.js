@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateQuoteTotals,
+  isValidCustomItem,
   isValidLaborItem,
 } from "./quoteCalculations.js";
 
@@ -28,6 +29,36 @@ test("validates editable labor hours and hourly rate", () => {
   );
   assert.equal(
     isValidLaborItem({ description: "Brake service", hours: 1, hourlyRate: -1 }),
+    false
+  );
+});
+
+test("validates one-off custom quote items", () => {
+  assert.equal(
+    isValidCustomItem({
+      isCustom: true,
+      name: "Shop supplies",
+      price: 12.5,
+      quoteQuantity: 1,
+    }),
+    true
+  );
+  assert.equal(
+    isValidCustomItem({
+      isCustom: true,
+      name: "Shop supplies",
+      price: -1,
+      quoteQuantity: 1,
+    }),
+    false
+  );
+  assert.equal(
+    isValidCustomItem({
+      isCustom: true,
+      name: "Shop supplies",
+      price: 10,
+      quoteQuantity: 1.5,
+    }),
     false
   );
 });

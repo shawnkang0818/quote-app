@@ -17,6 +17,7 @@ import QuickService from "./models/QuickService.js";
 import { DEFAULT_QUICK_SERVICES } from "./data/defaultQuickServices.js";
 import {
   calculateQuoteTotals,
+  isValidCustomItem,
   isValidLaborItem,
   roundCurrency,
 } from "./utils/quoteCalculations.js";
@@ -521,9 +522,26 @@ async function buildQuoteSnapshot(payload) {
     throw error;
   }
 
-  // Re-read every selected part to enforce current price, identity, and stock.
+  // Re-read inventory lines to enforce current price and stock. One-off custom
+  // lines are validated separately and never receive an inventory reference.
   const cleanItems = await Promise.all(
     items.map(async (item) => {
+      if (item.isCustom === true) {
+        if (!isValidCustomItem(item)) {
+          const error = new Error(
+            "Custom items need a name, non-negative price, and whole-number quantity"
+          );
+          error.status = 400;
+          throw error;
+        }
+        return {
+          isCustom: true,
+          name: item.name.trim(),
+          price: roundCurrency(item.price),
+          quoteQuantity: Number(item.quoteQuantity),
+        };
+      }
+
       const part = await Part.findById(item.partId);
       const requestedQuantity = Number(item.quoteQuantity);
       if (!part) {
@@ -542,6 +560,7 @@ async function buildQuoteSnapshot(payload) {
       }
       return {
         partId: part._id,
+        isCustom: false,
         name: part.name,
         price: roundCurrency(part.price),
         quoteQuantity: requestedQuantity,
@@ -784,6 +803,9 @@ app.post("/api/quotes/:id/duplicate", adminAuth, async (req, res) => {
       notes: source.notes,
       items: source.items.map((item) => ({
         partId: item.partId,
+        isCustom: item.isCustom,
+        name: item.name,
+        price: item.price,
         quoteQuantity: item.quoteQuantity,
       })),
       laborItems: source.laborItems.map((item) => ({

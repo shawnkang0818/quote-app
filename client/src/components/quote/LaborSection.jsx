@@ -8,16 +8,8 @@ function createEmptyLabor(defaultHourlyRate) {
   };
 }
 
-function LaborSection({
-  defaultHourlyRate,
-  laborItems,
-  onAdd,
-  onRemove,
-  onUpdate,
-}) {
-  const [labor, setLabor] = useState(() =>
-    createEmptyLabor(defaultHourlyRate)
-  );
+function LaborSection({ defaultHourlyRate, onAdd }) {
+  const [labor, setLabor] = useState(() => createEmptyLabor(defaultHourlyRate));
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -34,7 +26,7 @@ function LaborSection({
 
   return (
     <div className="mt-6 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold text-slate-950">Labor</h3>
+      <h3 className="font-semibold text-slate-950">Add Labor</h3>
       <form onSubmit={handleSubmit} className="mt-3 grid gap-2">
         <input
           type="text"
@@ -87,63 +79,6 @@ function LaborSection({
         </button>
       </form>
 
-      {laborItems.length > 0 && (
-        <div className="mt-3 space-y-2">
-          {laborItems.map((item) => (
-            <div
-              key={item.id}
-              className="rounded-xl bg-slate-50 p-3 text-sm"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <p className="font-medium text-slate-800">{item.description}</p>
-                <button
-                  type="button"
-                  onClick={() => onRemove(item.id)}
-                  className="font-medium text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </button>
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <label className="text-xs font-medium text-slate-500">
-                  Hours
-                  {/* Keep saved labor rows editable at the same precision. */}
-                  <input
-                    type="number"
-                    value={item.hours}
-                    onChange={(event) =>
-                      onUpdate(item.id, { hours: event.target.value })
-                    }
-                    min="0.1"
-                    step="0.01"
-                    aria-label={`${item.description} labor hours`}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-                <label className="text-xs font-medium text-slate-500">
-                  Hourly Rate ($)
-                  <input
-                    type="number"
-                    value={item.hourlyRate}
-                    onChange={(event) =>
-                      onUpdate(item.id, { hourlyRate: event.target.value })
-                    }
-                    min="0"
-                    step="0.01"
-                    aria-label={`${item.description} hourly rate`}
-                    className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                  />
-                </label>
-              </div>
-
-              <p className="mt-3 text-right font-semibold text-slate-800">
-                ${(Number(item.hours) * Number(item.hourlyRate)).toFixed(2)}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -19,6 +19,24 @@ export function isValidLaborItem(item) {
   );
 }
 
+// Custom lines are intentionally separate from inventory-backed parts. They
+// support one-off materials or fees while keeping quantities predictable.
+export function isValidCustomItem(item) {
+  const quantity = Number(item.quoteQuantity);
+  const price = Number(item.price);
+
+  return (
+    item.isCustom === true &&
+    Boolean(item.name?.trim()) &&
+    item.name.trim().length <= 160 &&
+    Number.isInteger(quantity) &&
+    quantity >= 1 &&
+    quantity <= 999 &&
+    Number.isFinite(price) &&
+    price >= 0
+  );
+}
+
 export function calculateQuoteTotals({
   items = [],
   laborItems = [],
