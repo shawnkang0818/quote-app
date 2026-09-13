@@ -340,6 +340,85 @@ async function findCustomerVinConflict(vehicles, excludedId) {
   return Customer.findOne(query).select("name vehicles.vin");
 }
 
+async function prepareQuoteCustomerSync(quoteSnapshot, existingQuote) {
+  const customer = quoteSnapshot.customer;
+  if (!customer?.phone && !customer?.email) return null;
+
+  let matchingCustomer = await findCustomerByContact(customer);
+  if (!matchingCustomer && existingQuote?.customerRecordId) {
+    const samePhone =
+      normalizePhone(customer.phone) &&
+      normalizePhone(customer.phone) ===
+        normalizePhone(existingQuote.customer?.phone);
+    const sameEmail =
+      normalizeEmail(customer.email) &&
+      normalizeEmail(customer.email) ===
+        normalizeEmail(existingQuote.customer?.email);
+
+    // Reuse the linked customer only when at least one durable contact field
+    // still identifies the same person; otherwise create/find a new record.
+    if (samePhone || sameEmail) {
+      matchingCustomer = await Customer.findById(
+        existingQuote.customerRecordId
+      );
+    }
+  }
+
+  if (quoteSnapshot.vehicle?.vin) {
+    const vinConflict = await findCustomerVinConflict(
+      [quoteSnapshot.vehicle],
+      matchingCustomer?._id
+    );
+    if (vinConflict) {
+      const error = new Error(
+        `This VIN is already assigned to ${vinConflict.name}.`
+      );
+      error.status = 409;
+      throw error;
+    }
+  }
+
+  return matchingCustomer;
+}
+
+async function syncQuoteCustomerRecord(savedQuote, matchingCustomer) {
+  const customer = savedQuote.customer;
+  if (!customer?.phone && !customer?.email) return;
+
+  // Contact details create or refresh the customer index while the Quote
+  // retains its own historical snapshot for documents and auditability.
+  const record = matchingCustomer || new Customer();
+  record.name = customer.name;
+  record.phone = customer.phone;
+  record.phoneNormalized = normalizePhone(customer.phone);
+  record.email = customer.email;
+  record.emailNormalized = normalizeEmail(customer.email);
+  record.lastVisitAt = savedQuote.createdAt;
+  record.lastQuoteId = savedQuote._id;
+
+  const selectedVehicle = savedQuote.vehicle?.toObject
+    ? savedQuote.vehicle.toObject()
+    : savedQuote.vehicle;
+  if (
+    selectedVehicle &&
+    (selectedVehicle.year || selectedVehicle.vin || selectedVehicle.licensePlate)
+  ) {
+    const vehicleIndex = findMatchingVehicleIndex(
+      record.vehicles,
+      selectedVehicle
+    );
+    if (vehicleIndex >= 0) {
+      Object.assign(record.vehicles[vehicleIndex], selectedVehicle);
+    } else {
+      record.vehicles.push(selectedVehicle);
+    }
+  }
+
+  await record.save();
+  savedQuote.customerRecordId = record._id;
+  await savedQuote.save();
+}
+
 async function findCustomerRecordConflict(customer, excludedId) {
   const contactConflict = await findCustomerContactConflict(customer, excludedId);
   if (contactConflict) {
@@ -607,73 +686,16 @@ async function buildQuoteSnapshot(payload) {
 app.post("/api/quotes", async (req, res) => {
   try {
     const quoteSnapshot = await buildQuoteSnapshot(req.body);
-    const hasCustomerContact = Boolean(
-      quoteSnapshot.customer?.phone || quoteSnapshot.customer?.email
-    );
-    const matchingCustomer = hasCustomerContact
-      ? await findCustomerByContact(quoteSnapshot.customer)
-      : null;
-
-    // Run the VIN ownership check before saving. Otherwise the quote could be
-    // created successfully while its customer record silently fails to sync.
-    if (hasCustomerContact && quoteSnapshot.vehicle?.vin) {
-      const vinConflict = await findCustomerVinConflict(
-        [quoteSnapshot.vehicle],
-        matchingCustomer?._id
-      );
-      if (vinConflict) {
-        const error = new Error(
-          `This VIN is already assigned to ${vinConflict.name}.`
-        );
-        error.status = 409;
-        throw error;
-      }
-    }
+    // Validate customer/VIN ownership before the quote is committed.
+    const matchingCustomer = await prepareQuoteCustomerSync(quoteSnapshot);
 
     const savedQuote = await Quote.create(quoteSnapshot);
 
-    // Contact details create or refresh a returning-customer record. Failure to
-    // sync this convenience index never invalidates the quote already saved.
-    const customer = savedQuote.customer;
-    if (customer?.phone || customer?.email) {
-      try {
-        const phoneNormalized = normalizePhone(customer.phone);
-        const emailNormalized = normalizeEmail(customer.email);
-        let record = matchingCustomer;
-        if (!record) record = new Customer();
-        record.name = customer.name;
-        record.phone = customer.phone;
-        record.phoneNormalized = phoneNormalized;
-        record.email = customer.email;
-        record.emailNormalized = emailNormalized;
-        record.lastVisitAt = savedQuote.createdAt;
-        record.lastQuoteId = savedQuote._id;
-
-        const selectedVehicle = savedQuote.vehicle?.toObject
-          ? savedQuote.vehicle.toObject()
-          : savedQuote.vehicle;
-        if (
-          selectedVehicle &&
-          (selectedVehicle.year || selectedVehicle.vin || selectedVehicle.licensePlate)
-        ) {
-          const vehicleIndex = findMatchingVehicleIndex(
-            record.vehicles,
-            selectedVehicle
-          );
-          if (vehicleIndex >= 0) {
-            Object.assign(record.vehicles[vehicleIndex], selectedVehicle);
-          } else {
-            record.vehicles.push(selectedVehicle);
-          }
-        }
-        await record.save();
-        // Store the relationship after the customer upsert succeeds. This does
-        // not alter the immutable customer/contact snapshot on the quote.
-        savedQuote.customerRecordId = record._id;
-        await savedQuote.save();
-      } catch (customerError) {
-        console.error("Customer record sync failed:", customerError.message);
-      }
+    // A customer-index failure does not invalidate the already-saved Quote.
+    try {
+      await syncQuoteCustomerRecord(savedQuote, matchingCustomer);
+    } catch (customerError) {
+      console.error("Customer record sync failed:", customerError.message);
     }
     return res.status(201).json(savedQuote);
   } catch (err) {
@@ -770,7 +792,54 @@ app.get("/api/quotes/:id", adminAuth, async (req, res) => {
   }
 });
 
-// Status is the only mutable field on a saved quote snapshot.
+// Draft quotes may be corrected, but every edit is rebuilt through the same
+// authoritative inventory, labor, tax, and validation path as a new quote.
+app.put("/api/quotes/:id", adminAuth, async (req, res) => {
+  try {
+    const existingQuote = await Quote.findById(req.params.id);
+    if (!existingQuote) {
+      return res.status(404).json({ message: "Quote not found" });
+    }
+    if (existingQuote.status === "final") {
+      return res.status(409).json({
+        message: "Final quotes cannot be edited. Reopen it as draft first.",
+      });
+    }
+
+    const rebuiltSnapshot = await buildQuoteSnapshot({
+      ...req.body,
+      status: "draft",
+    });
+    const matchingCustomer = await prepareQuoteCustomerSync(
+      rebuiltSnapshot,
+      existingQuote
+    );
+    const editableSnapshot = { ...rebuiltSnapshot };
+    delete editableSnapshot.quoteNumber;
+    delete editableSnapshot.status;
+
+    // A draft edit retains its permanent identity and original creation date.
+    // The normal Mongoose save updates only updatedAt.
+    existingQuote.set(editableSnapshot);
+    existingQuote.status = rebuiltSnapshot.status;
+    if (!rebuiltSnapshot.customer?.phone && !rebuiltSnapshot.customer?.email) {
+      existingQuote.customerRecordId = undefined;
+    }
+    await existingQuote.save();
+
+    try {
+      await syncQuoteCustomerRecord(existingQuote, matchingCustomer);
+    } catch (customerError) {
+      console.error("Customer record sync failed:", customerError.message);
+    }
+    return res.json(existingQuote);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Lifecycle changes stay separate from content edits so Final records remain
+// locked unless an administrator explicitly reopens them.
 app.patch("/api/quotes/:id/status", adminAuth, async (req, res) => {
   try {
     if (!["draft", "final"].includes(req.body.status)) {

@@ -135,6 +135,12 @@ function QuoteDetailPage() {
     }
   };
 
+  const handleEditDraft = () => {
+    // Pass the already-authorized snapshot directly into the quote workspace.
+    // Dashboard removes it from browser history after its hooks capture it.
+    navigate("/", { state: { quoteEdit: quote } });
+  };
+
   const handleDelete = async () => {
     const confirmed = window.confirm(
       `Delete ${quote.quoteNumber || "this quote"}? This cannot be undone.`
@@ -169,6 +175,15 @@ function QuoteDetailPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
+          {adminToken && (quote.status || "draft") === "draft" && (
+            <button
+              type="button"
+              onClick={handleEditDraft}
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 font-semibold text-white hover:bg-emerald-700"
+            >
+              Edit Draft
+            </button>
+          )}
           <button
             type="button"
             onClick={handleGeneratePDF}

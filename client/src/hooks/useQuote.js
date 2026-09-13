@@ -1,7 +1,9 @@
-import { useState } from "react";
-import { createQuote } from "../services/quotesService";
+import { useEffect, useState } from "react";
+import { getStoredAdminToken } from "../services/authService";
+import { createQuote, updateQuote } from "../services/quotesService";
 import { applyQuickService } from "../utils/applyQuickService";
 import { calculateQuoteTotals } from "../utils/calculateQuoteTotals";
+import { createQuoteEditState } from "../utils/quoteEdit";
 
 function isValidLaborItem(item) {
   const hours = Number(item.hours);
@@ -16,23 +18,45 @@ function isValidLaborItem(item) {
   );
 }
 
-export function useQuote(parts, taxRate) {
-  const [quoteItems, setQuoteItems] = useState([]);
-  const [laborItems, setLaborItems] = useState([]);
+export function useQuote(parts, taxRate, quoteEdit) {
+  const [initialEditState] = useState(() => createQuoteEditState(quoteEdit));
+  const [quoteItems, setQuoteItems] = useState(() =>
+    initialEditState.quoteItems
+  );
+  const [laborItems, setLaborItems] = useState(initialEditState.laborItems);
   const [quoteError, setQuoteError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [savedQuote, setSavedQuote] = useState(null);
   const [savedQuoteId, setSavedQuoteId] = useState("");
   const [savedQuoteNumber, setSavedQuoteNumber] = useState("");
-  const [quoteStatus, setQuoteStatus] = useState("draft");
+  const [editingQuoteId, setEditingQuoteId] = useState(quoteEdit?._id || "");
+  const [editingQuoteNumber, setEditingQuoteNumber] = useState(
+    quoteEdit?.quoteNumber || ""
+  );
+  const [quoteStatus, setQuoteStatus] = useState(
+    quoteEdit?.status === "final" ? "final" : "draft"
+  );
   const [quickServiceMessage, setQuickServiceMessage] = useState(null);
-  const [notes, setNotes] = useState({
-    customerRequest: "",
-    technicianNotes: "",
-  });
+  const [notes, setNotes] = useState(initialEditState.notes);
 
   const totals = calculateQuoteTotals({ quoteItems, laborItems, taxRate });
+
+  useEffect(() => {
+    if (!editingQuoteId || parts.length === 0) return;
+
+    // Refresh editable inventory rows with current stock and price. The server
+    // performs the same check at save time, so the UI and final result agree.
+    setQuoteItems((items) =>
+      items.map((item) => {
+        if (item.isCustom) return item;
+        const currentPart = parts.find((part) => part._id === item._id);
+        return currentPart
+          ? { ...item, ...currentPart, quoteQuantity: item.quoteQuantity }
+          : item;
+      })
+    );
+  }, [editingQuoteId, parts]);
 
   // Any draft change makes the previous saved marker obsolete and allows the
   // updated quote to be saved as a new record.
@@ -224,6 +248,8 @@ export function useQuote(parts, taxRate) {
     setQuickServiceMessage(null);
     setNotes({ customerRequest: "", technicianNotes: "" });
     setQuoteStatus("draft");
+    setEditingQuoteId("");
+    setEditingQuoteNumber("");
     markDraftChanged();
   };
 
@@ -270,7 +296,7 @@ export function useQuote(parts, taxRate) {
     try {
       // The server re-reads inventory, validates custom lines, and calculates
       // authoritative totals rather than trusting browser calculations.
-      const savedQuote = await createQuote({
+      const payload = {
         customer,
         customerName: customer.name || "Walk-in Customer",
         vehicle,
@@ -288,10 +314,21 @@ export function useQuote(parts, taxRate) {
         })),
         notes,
         status: quoteStatus,
-      });
+      };
+      const adminToken = editingQuoteId ? getStoredAdminToken() : "";
+      if (editingQuoteId && !adminToken) {
+        throw new Error("Your admin session expired. Open Quote History again.");
+      }
+      const savedQuote = editingQuoteId
+        ? await updateQuote(editingQuoteId, payload, adminToken)
+        : await createQuote(payload);
 
       setQuoteError("");
-      setSaveMessage(`Quote ${savedQuote.quoteNumber} saved successfully.`);
+      setSaveMessage(
+        `Quote ${savedQuote.quoteNumber} ${
+          editingQuoteId ? "updated" : "saved"
+        } successfully.`
+      );
       // Keep the permanent database ID so the success state can open the
       // exact saved record without searching Quote History first.
       setSavedQuote(savedQuote);
@@ -312,6 +349,7 @@ export function useQuote(parts, taxRate) {
     applyService,
     clearQuote,
     decreaseQuantity,
+    editingQuoteId,
     generatePDF,
     increaseQuantity,
     isSaving,
@@ -321,6 +359,7 @@ export function useQuote(parts, taxRate) {
     quickServiceMessage,
     quoteError,
     quoteItems,
+    quoteNumber: savedQuoteNumber || editingQuoteNumber,
     quoteStatus,
     removeLabor,
     removePart,

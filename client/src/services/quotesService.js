@@ -48,6 +48,19 @@ export async function updateQuoteStatus(id, status, token) {
   });
 }
 
+export async function updateQuote(id, quote, token) {
+  // Full quote edits are admin-only and the server accepts them only while the
+  // stored record is still a draft.
+  return apiRequest(`/quotes/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    headers: {
+      ...adminHeaders(token),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(quote),
+  });
+}
+
 export async function duplicateQuote(id, token) {
   return apiRequest(`/quotes/${encodeURIComponent(id)}/duplicate`, {
     method: "POST",

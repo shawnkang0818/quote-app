@@ -1,5 +1,6 @@
 function QuoteSummary({
   errorMessage,
+  isEditing,
   isSaving,
   isSaved,
   laborItems,
@@ -99,7 +100,17 @@ function QuoteSummary({
           disabled={isSaving || isSaved || !hasQuoteContent}
           className="rounded-xl bg-emerald-600 px-4 py-3 font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {isSaving ? "Saving..." : isSaved ? "Quote saved" : "Save Quote"}
+          {isSaving
+            ? isEditing
+              ? "Updating..."
+              : "Saving..."
+            : isSaved
+              ? isEditing
+                ? "Quote updated"
+                : "Quote saved"
+              : isEditing
+                ? "Update Draft"
+                : "Save Quote"}
         </button>
         <button
           type="button"

@@ -26,9 +26,11 @@ function DashboardPage() {
     setWorkspaceSearch,
   } = useOutletContext();
   const quotePrefill = location.state?.quotePrefill;
+  const quoteEdit = location.state?.quoteEdit;
+  const initialDraft = quoteEdit || quotePrefill;
   const [catalogTab, setCatalogTab] = useState("all");
   const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
-    Boolean(quotePrefill)
+    Boolean(initialDraft)
   );
 
   const favoriteJobs = useFavoriteJobs();
@@ -38,8 +40,12 @@ function DashboardPage() {
   const serviceSelection = useServiceSelection(
     business.settings.defaultHourlyRate
   );
-  const quote = useQuote(partsManager.parts, business.settings.taxRate);
-  const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
+  const quote = useQuote(
+    partsManager.parts,
+    business.settings.taxRate,
+    quoteEdit
+  );
+  const vehicleForm = useVehicle(quote.markDraftChanged, initialDraft);
   const customerLookup = useCustomerLookup(vehicleForm.loadCustomerVehicle);
 
   // Present a useful starting price without persisting a second price source.
@@ -117,12 +123,12 @@ function DashboardPage() {
   });
 
   useEffect(() => {
-    if (!quotePrefill) return;
+    if (!initialDraft) return;
 
-    // useVehicle has already captured the selected record. Remove its private
-    // details from browser history while keeping the visible form populated.
+    // The hooks have already captured the navigation snapshot. Remove private
+    // quote/customer details from browser history while preserving form state.
     navigate("/", { replace: true, state: null });
-  }, [navigate, quotePrefill]);
+  }, [initialDraft, navigate]);
 
   return (
     <div>
@@ -135,8 +141,9 @@ function DashboardPage() {
       {showPrefillNotice && (
         <div className="mb-6 flex flex-col gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 sm:flex-row sm:items-center sm:justify-between">
           <span>
-            Returning customer loaded. Review the details before saving the
-            quote.
+            {quote.editingQuoteId
+              ? `Editing draft ${quote.quoteNumber}. Review changes before updating.`
+              : "Returning customer loaded. Review the details before saving the quote."}
           </span>
           <button
             type="button"
@@ -225,6 +232,7 @@ function DashboardPage() {
           errorMessage={quote.quoteError}
           isSaving={quote.isSaving}
           isSaved={Boolean(quote.savedQuoteNumber)}
+          isEditing={Boolean(quote.editingQuoteId)}
           laborItems={quote.laborItems}
           onClear={quote.clearQuote}
           onGeneratePDF={() =>
@@ -249,7 +257,7 @@ function DashboardPage() {
           }
           onStartNewQuote={handleNewQuote}
           quoteItems={quote.quoteItems}
-          quoteNumber={quote.savedQuoteNumber}
+          quoteNumber={quote.quoteNumber}
           quoteStatus={quote.quoteStatus}
           saveMessage={quote.saveMessage}
           totals={quote.totals}
