@@ -12,6 +12,8 @@ export function useCustomerLookup(onSelectCustomer) {
   const [results, setResults] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState("");
 
   useEffect(() => {
     const cleanQuery = query.trim();
@@ -64,9 +66,31 @@ export function useCustomerLookup(onSelectCustomer) {
 
   const selectCustomer = (customer, vehicle) => {
     onSelectCustomer(customer, vehicle);
+    setSelectedCustomer(customer);
+    setSelectedVehicleId(vehicle?._id || "");
     setQuery("");
     setResults([]);
     setErrorMessage("");
+  };
+
+  const selectVehicle = (vehicleId) => {
+    if (!selectedCustomer) return;
+    const vehicle = selectedCustomer.vehicles?.find(
+      (item) => String(item._id) === String(vehicleId)
+    );
+    setSelectedVehicleId(vehicle?._id || "");
+    onSelectCustomer(selectedCustomer, vehicle || {});
+  };
+
+  const startNewCustomer = () => {
+    // Starting fresh clears only customer context. Existing quote items remain
+    // intact so staff can correct whom a draft belongs to without rebuilding it.
+    setSelectedCustomer(null);
+    setSelectedVehicleId("");
+    setQuery("");
+    setResults([]);
+    setErrorMessage("");
+    onSelectCustomer({}, {});
   };
 
   return {
@@ -75,7 +99,11 @@ export function useCustomerLookup(onSelectCustomer) {
     isLoading,
     query,
     results,
+    selectedCustomer,
+    selectedVehicleId,
     selectCustomer,
+    selectVehicle,
+    startNewCustomer,
     updateQuery,
   };
 }

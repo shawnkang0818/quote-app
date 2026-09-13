@@ -1,3 +1,4 @@
+import { useState } from "react";
 import CustomerLookup from "./CustomerLookup";
 
 function CustomerVehicleCard({
@@ -18,6 +19,9 @@ function CustomerVehicleCard({
   vinMessage,
   years,
 }) {
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const hasSelectedCustomer = Boolean(customerLookup.selectedCustomer);
+
   return (
     <section className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
       <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -41,11 +45,59 @@ function CustomerVehicleCard({
         onQueryChange={(event) =>
           customerLookup.updateQuery(event.target.value)
         }
-        onSelect={customerLookup.selectCustomer}
+        onEdit={() => setIsEditingDetails(true)}
+        onNew={() => {
+          customerLookup.startNewCustomer();
+          setIsEditingDetails(true);
+        }}
+        onSelect={(selectedCustomer, selectedVehicle) => {
+          setIsEditingDetails(false);
+          customerLookup.selectCustomer(selectedCustomer, selectedVehicle);
+        }}
+        onVehicleChange={customerLookup.selectVehicle}
         query={customerLookup.query}
         results={customerLookup.results}
+        selectedCustomer={customerLookup.selectedCustomer}
+        selectedVehicleId={customerLookup.selectedVehicleId}
       />
 
+      {hasSelectedCustomer && !isEditingDetails && (
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 md:grid-cols-4">
+          <span className="truncate">
+            <strong className="text-slate-800">Vehicle:</strong>{" "}
+            {[vehicle.year, vehicle.make, vehicle.model]
+              .filter(Boolean)
+              .join(" ") || "Not selected"}
+          </span>
+          <span className="truncate">
+            <strong className="text-slate-800">VIN:</strong>{" "}
+            {vehicle.vin || "—"}
+          </span>
+          <span className="truncate">
+            <strong className="text-slate-800">Plate:</strong>{" "}
+            {vehicle.licensePlate || "—"}
+          </span>
+          <span className="truncate">
+            <strong className="text-slate-800">Mileage:</strong>{" "}
+            {vehicle.mileage ? Number(vehicle.mileage).toLocaleString() : "—"}
+          </span>
+        </div>
+      )}
+
+      {(!hasSelectedCustomer || isEditingDetails) && (
+      <>
+      {hasSelectedCustomer && (
+        <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <span>Editing details for this quote only.</span>
+          <button
+            type="button"
+            onClick={() => setIsEditingDetails(false)}
+            className="font-semibold hover:text-amber-950"
+          >
+            Collapse
+          </button>
+        </div>
+      )}
       <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
@@ -210,6 +262,8 @@ function CustomerVehicleCard({
           </p>
         )}
       </details>
+      </>
+      )}
       {errorMessage && (
         <p className="mt-3 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
           {errorMessage}
