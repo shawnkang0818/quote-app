@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import PartsServicesCatalog from "../components/catalog/PartsServicesCatalog";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
@@ -18,8 +18,8 @@ import { useVehicle } from "../hooks/useVehicle";
 function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { workspaceSearch, setWorkspaceSearch } = useOutletContext();
   const quotePrefill = location.state?.quotePrefill;
-  const [catalogSearch, setCatalogSearch] = useState("");
   const [catalogTab, setCatalogTab] = useState("all");
   const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
     Boolean(quotePrefill)
@@ -87,7 +87,7 @@ function DashboardPage() {
       )}
 
       {/* Customer context and favorite jobs are the two fastest entry points. */}
-      <div className="mb-5 grid items-stretch gap-5 lg:grid-cols-[minmax(0,2fr)_minmax(250px,0.8fr)]">
+      <div className="mb-3 grid items-stretch gap-3 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)]">
         <CustomerVehicleCard
           customer={vehicleForm.customer}
           customerLookup={customerLookup}
@@ -123,7 +123,7 @@ function DashboardPage() {
       />
 
       {/* The workbench mirrors the shop flow: find, build, then confirm totals. */}
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(240px,0.85fr)_minmax(360px,1.2fr)_minmax(240px,0.7fr)]">
+      <div className="grid items-start gap-3 lg:grid-cols-[minmax(210px,0.85fr)_minmax(330px,1.3fr)_minmax(210px,0.72fr)]">
         <div className="min-w-0">
           <PartsServicesCatalog
             activeTab={catalogTab}
@@ -132,12 +132,12 @@ function DashboardPage() {
             onAddPart={quote.addPart}
             onApplyService={quote.applyService}
             onCancelService={serviceSelection.clearSelection}
-            onQueryChange={(event) => setCatalogSearch(event.target.value)}
+            onQueryChange={(event) => setWorkspaceSearch(event.target.value)}
             onSelectService={(service) => selectService(service, false)}
             onTabChange={setCatalogTab}
             onUpdateLabor={serviceSelection.updateLaborDraft}
             parts={partsManager.parts}
-            query={catalogSearch}
+            query={workspaceSearch}
             selectedService={serviceSelection.selectedService}
             services={quickServices.services}
           />

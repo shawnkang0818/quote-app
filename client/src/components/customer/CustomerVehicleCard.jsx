@@ -19,13 +19,13 @@ function CustomerVehicleCard({
   years,
 }) {
   return (
-    <section className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
-      <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+    <section className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${className}`}>
+      <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-xl font-semibold text-slate-950">
+          <h2 className="text-lg font-semibold text-slate-950">
             Customer & Vehicle
           </h2>
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-0.5 text-xs text-slate-500">
             Identify the customer and vehicle before building the quote.
           </p>
         </div>
@@ -46,7 +46,7 @@ function CustomerVehicleCard({
         results={customerLookup.results}
       />
 
-      <div className="grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-3">
+      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Customer name
@@ -57,7 +57,7 @@ function CustomerVehicleCard({
             placeholder="Walk-in Customer"
             value={customer.name}
             onChange={onCustomerChange}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </label>
 
@@ -69,7 +69,7 @@ function CustomerVehicleCard({
             value={customer.phone}
             onChange={onCustomerChange}
             placeholder="(555) 123-4567"
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </label>
 
@@ -81,7 +81,7 @@ function CustomerVehicleCard({
             value={customer.email}
             onChange={onCustomerChange}
             placeholder="customer@example.com"
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           />
         </label>
 
@@ -92,7 +92,7 @@ function CustomerVehicleCard({
           <select
             value={vehicle.year}
             onChange={onYearChange}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
           >
             <option value="">Select Year</option>
             {years.map((year) => (
@@ -111,7 +111,7 @@ function CustomerVehicleCard({
             value={vehicle.make}
             onChange={onMakeChange}
             disabled={!vehicle.year}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           >
             <option value="">Select Make</option>
             {makes.map((make, index) => (
@@ -130,7 +130,7 @@ function CustomerVehicleCard({
             value={vehicle.model}
             onChange={onModelChange}
             disabled={!vehicle.make}
-            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-400"
           >
             <option value="">Select Model</option>
             {models.map((model, index) => (
@@ -144,8 +144,8 @@ function CustomerVehicleCard({
       </div>
 
       {/* Less frequently used identifiers stay available without dominating the form. */}
-      <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
-        <summary className="cursor-pointer px-4 py-3 text-sm font-semibold text-slate-700">
+      <details className="mt-3 rounded-xl border border-slate-200 bg-slate-50">
+        <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-slate-700">
           Vehicle identifiers & mileage
         </summary>
         <div className="grid gap-3 border-t border-slate-200 p-4 md:grid-cols-3">

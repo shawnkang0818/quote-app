@@ -9,7 +9,7 @@ function QuickServices({
   services,
 }) {
   return (
-    <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="mb-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
@@ -31,7 +31,7 @@ function QuickServices({
       ) : isLoading ? (
         <p className="mt-3 text-sm text-slate-500">Loading services...</p>
       ) : (
-        <div className="mt-3 grid gap-2 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-6">
+        <div className="mt-2.5 grid gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
           {services.map((service) => {
             const isFavorite = favoriteServiceIds.includes(service.id);
             const isSelected = selectedService?.id === service.id;
@@ -48,7 +48,7 @@ function QuickServices({
                 <button
                   type="button"
                   onClick={() => onSelectService(service)}
-                  className="flex w-full items-center gap-2 p-3 pr-9 text-left"
+                  className="flex w-full items-center gap-2 p-2.5 pr-8 text-left"
                 >
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">
                     {service.shortCode}

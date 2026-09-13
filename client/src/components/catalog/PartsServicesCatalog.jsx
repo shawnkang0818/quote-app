@@ -41,7 +41,7 @@ function PartsServicesCatalog({
   return (
     <section
       id="parts-services-catalog"
-      className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+      className="scroll-mt-20 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm"
     >
       <div>
         <h2 className="text-lg font-semibold text-slate-950">
@@ -100,7 +100,7 @@ function PartsServicesCatalog({
         </p>
       )}
 
-      <div className="mt-3 max-h-[620px] space-y-1 overflow-y-auto pr-1">
+      <div className="mt-3 max-h-[600px] space-y-1 overflow-y-auto pr-1">
         {showServices &&
           filteredServices.map((service) => (
             <button
