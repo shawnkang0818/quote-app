@@ -6,12 +6,16 @@ export function matchesCatalogSearch(item, query) {
   const normalizedQuery = normalize(query);
   if (!normalizedQuery) return true;
 
-  // Service templates contain useful search terms inside their parts and
-  // labor definitions, while inventory records currently use only name.
+  // Optional inventory metadata is included now so adding SKU, brand, and
+  // category fields later will not require another search implementation.
   const searchableValues = [
     item.name,
     item.description,
     item.shortCode,
+    item.partNumber,
+    item.sku,
+    item.brand,
+    item.category,
     ...(item.parts || []).flatMap((part) => [
       part.label,
       ...(part.searchTerms || []),

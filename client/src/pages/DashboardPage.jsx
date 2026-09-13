@@ -159,7 +159,8 @@ function DashboardPage() {
             parts={partsManager.parts}
             query={workspaceSearch}
             selectedService={serviceSelection.selectedService}
-            services={quickServices.services}
+            // Reuse presentation data so catalog prices match Quick Services.
+            services={presentedServices}
           />
         </div>
 

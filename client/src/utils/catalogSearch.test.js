@@ -26,6 +26,19 @@ test("matches inventory names without case sensitivity", () => {
   assert.deepEqual(filterCatalogItems(parts, " OIL "), [parts[0]]);
 });
 
+test("matches optional inventory metadata", () => {
+  const part = {
+    name: "Premium Filter",
+    partNumber: "PH4967",
+    brand: "Fram",
+    category: "Engine",
+  };
+
+  assert.equal(matchesCatalogSearch(part, "ph4967"), true);
+  assert.equal(matchesCatalogSearch(part, "FRAM"), true);
+  assert.equal(matchesCatalogSearch(part, "engine"), true);
+});
+
 test("returns every item for an empty search", () => {
   const items = [{ name: "Battery" }, { name: "Oil Filter" }];
   assert.deepEqual(filterCatalogItems(items, ""), items);
