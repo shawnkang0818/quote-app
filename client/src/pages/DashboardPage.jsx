@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import PartsServicesCatalog from "../components/catalog/PartsServicesCatalog";
+import UnsavedChangesGuard from "../components/common/UnsavedChangesGuard";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
 import QuoteBuilder from "../components/quote/QuoteBuilder";
 import QuoteSummary from "../components/quote/QuoteSummary";
@@ -29,6 +30,7 @@ function DashboardPage() {
   const quoteEdit = location.state?.quoteEdit;
   const initialDraft = quoteEdit || quotePrefill;
   const [catalogTab, setCatalogTab] = useState("all");
+  const [initiallyDirty] = useState(() => Boolean(quotePrefill));
   const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
     Boolean(initialDraft)
   );
@@ -43,7 +45,8 @@ function DashboardPage() {
   const quote = useQuote(
     partsManager.parts,
     business.settings.taxRate,
-    quoteEdit
+    quoteEdit,
+    initiallyDirty
   );
   const vehicleForm = useVehicle(quote.markDraftChanged, initialDraft);
   const customerLookup = useCustomerLookup(vehicleForm.loadCustomerVehicle);
@@ -71,6 +74,17 @@ function DashboardPage() {
     favoriteJobs.favoriteServiceIds.includes(service.id)
   );
 
+  const hasUnsavedChanges =
+    quote.isDirty &&
+    hasUnsavedQuote({
+      customer: vehicleForm.customer,
+      laborItems: quote.laborItems,
+      notes: quote.notes,
+      quoteItems: quote.quoteItems,
+      savedQuoteNumber: quote.savedQuoteNumber,
+      vehicle: vehicleForm.vehicle,
+    });
+
   const selectService = (service, shouldScroll = true) => {
     serviceSelection.selectService(service);
     setCatalogTab("services");
@@ -88,17 +102,8 @@ function DashboardPage() {
   const handleNewQuote = () => {
     // Saved quotes are safe to replace. Any later edit clears the saved quote
     // number, so the helper will treat that changed workspace as a draft again.
-    const shouldConfirm = hasUnsavedQuote({
-      customer: vehicleForm.customer,
-      laborItems: quote.laborItems,
-      notes: quote.notes,
-      quoteItems: quote.quoteItems,
-      savedQuoteNumber: quote.savedQuoteNumber,
-      vehicle: vehicleForm.vehicle,
-    });
-
     if (
-      shouldConfirm &&
+      hasUnsavedChanges &&
       !window.confirm("Start a new quote? Unsaved changes will be discarded.")
     ) {
       return;
@@ -132,6 +137,7 @@ function DashboardPage() {
 
   return (
     <div>
+      <UnsavedChangesGuard when={hasUnsavedChanges} />
       {business.settingsError && (
         <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
           {business.settingsError}

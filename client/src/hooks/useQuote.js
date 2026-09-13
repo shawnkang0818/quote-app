@@ -18,13 +18,14 @@ function isValidLaborItem(item) {
   );
 }
 
-export function useQuote(parts, taxRate, quoteEdit) {
+export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
   const [initialEditState] = useState(() => createQuoteEditState(quoteEdit));
   const [quoteItems, setQuoteItems] = useState(() =>
     initialEditState.quoteItems
   );
   const [laborItems, setLaborItems] = useState(initialEditState.laborItems);
   const [quoteError, setQuoteError] = useState("");
+  const [isDirty, setIsDirty] = useState(initiallyDirty);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
   const [savedQuote, setSavedQuote] = useState(null);
@@ -61,6 +62,7 @@ export function useQuote(parts, taxRate, quoteEdit) {
   // Any draft change makes the previous saved marker obsolete and allows the
   // updated quote to be saved as a new record.
   const markDraftChanged = () => {
+    setIsDirty(true);
     setSaveMessage("");
     setSavedQuote(null);
     setSavedQuoteId("");
@@ -250,7 +252,11 @@ export function useQuote(parts, taxRate, quoteEdit) {
     setQuoteStatus("draft");
     setEditingQuoteId("");
     setEditingQuoteNumber("");
-    markDraftChanged();
+    setSaveMessage("");
+    setSavedQuote(null);
+    setSavedQuoteId("");
+    setSavedQuoteNumber("");
+    setIsDirty(false);
   };
 
   const generatePDF = async ({ businessSettings, customer, vehicle }) => {
@@ -334,6 +340,7 @@ export function useQuote(parts, taxRate, quoteEdit) {
       setSavedQuote(savedQuote);
       setSavedQuoteId(savedQuote._id);
       setSavedQuoteNumber(savedQuote.quoteNumber);
+      setIsDirty(false);
     } catch (error) {
       console.error(error);
       setQuoteError(error.message || "Unable to save quote.");
@@ -352,6 +359,7 @@ export function useQuote(parts, taxRate, quoteEdit) {
     editingQuoteId,
     generatePDF,
     increaseQuantity,
+    isDirty,
     isSaving,
     laborItems,
     markDraftChanged,
