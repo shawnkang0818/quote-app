@@ -22,14 +22,23 @@ function NoteField({ label, name, onChange, placeholder, value }) {
   );
 }
 
-function QuoteNotes({ notes, onChange }) {
+function QuoteNotes({ notes, onChange, onClose }) {
   return (
-    <section className="mt-6 border-t border-slate-200 pt-5">
-      <div>
-        <h3 className="font-semibold text-slate-950">Quote Notes</h3>
+    <section className="mt-3 rounded-xl border border-blue-200 bg-blue-50/40 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+        <h3 className="text-sm font-semibold text-slate-950">Quote Notes</h3>
         <p className="mt-1 text-xs text-slate-500">
           Record the customer concern separately from the technician's findings.
         </p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="shrink-0 text-xs font-semibold text-blue-700 hover:text-blue-800"
+        >
+          Done
+        </button>
       </div>
 
       <div className="mt-4 grid gap-4">

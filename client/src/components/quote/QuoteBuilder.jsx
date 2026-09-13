@@ -25,6 +25,24 @@ function RemoveButton({ label, onClick }) {
   );
 }
 
+function NotePreview({ label, tone, value }) {
+  const tones = {
+    customer: "border-blue-100 bg-blue-50/70 text-blue-700",
+    technician: "border-amber-200 bg-amber-50/80 text-amber-700",
+  };
+
+  return (
+    <div className={`rounded-xl border px-3 py-2.5 ${tones[tone]}`}>
+      <p className="text-[10px] font-semibold uppercase tracking-wide">
+        {label}
+      </p>
+      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-700">
+        {value}
+      </p>
+    </div>
+  );
+}
+
 function QuoteBuilder({
   defaultHourlyRate,
   laborItems,
@@ -39,8 +57,15 @@ function QuoteBuilder({
   onUpdateLabor,
   quoteItems,
 }) {
-  const [showCustomItemForm, setShowCustomItemForm] = useState(false);
+  const [activePanel, setActivePanel] = useState(null);
   const itemCount = quoteItems.length + laborItems.length;
+  const hasNotes = Boolean(
+    notes.customerRequest?.trim() || notes.technicianNotes?.trim()
+  );
+
+  const togglePanel = (panel) => {
+    setActivePanel((current) => (current === panel ? null : panel));
+  };
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -177,28 +202,83 @@ function QuoteBuilder({
       <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
-          onClick={() => setShowCustomItemForm((current) => !current)}
-          className="rounded-lg border border-blue-200 px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+          onClick={() => togglePanel("custom")}
+          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            activePanel === "custom"
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700"
+          }`}
         >
           + Add Custom Item
         </button>
+        <button
+          type="button"
+          onClick={() => togglePanel("labor")}
+          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            activePanel === "labor"
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700"
+          }`}
+        >
+          + Add Labor
+        </button>
+        <button
+          type="button"
+          onClick={() => togglePanel("notes")}
+          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${
+            activePanel === "notes"
+              ? "border-blue-600 bg-blue-50 text-blue-700"
+              : "border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700"
+          }`}
+        >
+          {hasNotes ? "Edit Notes" : "+ Add Note"}
+        </button>
       </div>
 
-      {showCustomItemForm && (
+      {activePanel === "custom" && (
         <CustomItemForm
           onAdd={onAddCustomItem}
-          onCancel={() => setShowCustomItemForm(false)}
+          onCancel={() => setActivePanel(null)}
         />
       )}
 
-      {/* New labor is entered below; saved rows remain editable in the table. */}
-      <LaborSection
-        key={defaultHourlyRate}
-        defaultHourlyRate={defaultHourlyRate}
-        onAdd={onAddLabor}
-      />
+      {activePanel === "labor" && (
+        <LaborSection
+          key={defaultHourlyRate}
+          defaultHourlyRate={defaultHourlyRate}
+          onAdd={onAddLabor}
+          onCancel={() => setActivePanel(null)}
+          onComplete={() => setActivePanel(null)}
+        />
+      )}
 
-      <QuoteNotes notes={notes} onChange={onUpdateNote} />
+      {activePanel === "notes" && (
+        <QuoteNotes
+          notes={notes}
+          onChange={onUpdateNote}
+          onClose={() => setActivePanel(null)}
+        />
+      )}
+
+      {/* Notes remain visible as compact context without keeping editors open. */}
+      {hasNotes && activePanel !== "notes" && (
+        <div className="mt-3 grid gap-2">
+          {notes.customerRequest?.trim() && (
+            <NotePreview
+              label="Customer Request"
+              tone="customer"
+              value={notes.customerRequest}
+            />
+          )}
+          {notes.technicianNotes?.trim() && (
+            <NotePreview
+              label="Technician Note"
+              tone="technician"
+              value={notes.technicianNotes}
+            />
+          )}
+        </div>
+      )}
     </section>
   );
 }

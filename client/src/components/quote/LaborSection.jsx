@@ -8,7 +8,7 @@ function createEmptyLabor(defaultHourlyRate) {
   };
 }
 
-function LaborSection({ defaultHourlyRate, onAdd }) {
+function LaborSection({ defaultHourlyRate, onAdd, onCancel, onComplete }) {
   const [labor, setLabor] = useState(() => createEmptyLabor(defaultHourlyRate));
 
   const handleSubmit = (event) => {
@@ -21,12 +21,27 @@ function LaborSection({ defaultHourlyRate, onAdd }) {
     // Keep invalid input visible so the user can correct it.
     if (wasAdded !== false) {
       setLabor(createEmptyLabor(defaultHourlyRate));
+      onComplete?.();
     }
   };
 
   return (
-    <div className="mt-6 border-t border-slate-200 pt-5">
-      <h3 className="font-semibold text-slate-950">Add Labor</h3>
+    <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-950">Add Labor</h3>
+          <p className="mt-0.5 text-xs text-slate-500">
+            Hours and hourly rate remain editable after adding.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="text-xs font-semibold text-slate-500 hover:text-slate-800"
+        >
+          Cancel
+        </button>
+      </div>
       <form onSubmit={handleSubmit} className="mt-3 grid gap-2">
         <input
           type="text"
