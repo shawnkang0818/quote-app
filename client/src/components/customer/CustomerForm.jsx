@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { decodeVin } from "../../services/vehiclesService";
+import CustomerVehicleEditor from "./CustomerVehicleEditor";
 
 const EMPTY_VEHICLE = {
   year: "",
@@ -28,6 +30,7 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
     tags: (customer?.tags || []).join(", "),
     vehicles: (customer?.vehicles || []).map(editableVehicle),
   }));
+  const [vinStatuses, setVinStatuses] = useState({});
 
   const updateCustomer = (event) => {
     const { name, value } = event.target;
@@ -36,12 +39,74 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
 
   const updateVehicle = (localId, event) => {
     const { name, value } = event.target;
+    const nextValue =
+      name === "vin"
+        ? value.toUpperCase().replace(/\s/g, "").slice(0, 17)
+        : value;
     setFormData((current) => ({
       ...current,
       vehicles: current.vehicles.map((vehicle) =>
-        vehicle.localId === localId ? { ...vehicle, [name]: value } : vehicle
+        vehicle.localId === localId
+          ? { ...vehicle, [name]: nextValue }
+          : vehicle
       ),
     }));
+    if (name === "vin") {
+      setVinStatuses((current) => ({ ...current, [localId]: {} }));
+    }
+  };
+
+  const decodeVehicleVin = async (vehicle) => {
+    const { localId } = vehicle;
+    setVinStatuses((current) => ({
+      ...current,
+      [localId]: { isLoading: true },
+    }));
+
+    try {
+      const decoded = await decodeVin(vehicle.vin);
+      setFormData((current) => ({
+        ...current,
+        vehicles: current.vehicles.map((item) =>
+          item.localId === localId
+            ? {
+                ...item,
+                vin: decoded.vin,
+                year: decoded.year,
+                make: decoded.make,
+                model: decoded.model,
+              }
+            : item
+        ),
+      }));
+      setVinStatuses((current) => ({
+        ...current,
+        [localId]: {
+          message:
+            decoded.warning ||
+            `Decoded ${[decoded.year, decoded.make, decoded.model]
+              .filter(Boolean)
+              .join(" ")}.`,
+        },
+      }));
+    } catch (error) {
+      setVinStatuses((current) => ({
+        ...current,
+        [localId]: { error: error.message || "Unable to decode this VIN." },
+      }));
+    }
+  };
+
+  const removeVehicle = (localId) => {
+    setFormData((current) => ({
+      ...current,
+      vehicles: current.vehicles.filter((item) => item.localId !== localId),
+    }));
+    setVinStatuses((current) => {
+      const next = { ...current };
+      delete next[localId];
+      return next;
+    });
   };
 
   const submit = (event) => {
@@ -158,47 +223,15 @@ function CustomerForm({ customer, errorMessage, isSaving, onCancel, onSave }) {
 
         <div className="mt-4 space-y-3">
           {formData.vehicles.map((vehicle, index) => (
-            <div key={vehicle.localId} className="rounded-xl bg-slate-50 p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Vehicle {index + 1}</p>
-                <button
-                  type="button"
-                  onClick={() =>
-                    setFormData((current) => ({
-                      ...current,
-                      vehicles: current.vehicles.filter(
-                        (item) => item.localId !== vehicle.localId
-                      ),
-                    }))
-                  }
-                  className="text-xs font-semibold text-red-600 hover:text-red-700"
-                >
-                  Remove
-                </button>
-              </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-                {[
-                  ["year", "Year", "number"],
-                  ["make", "Make", "text"],
-                  ["model", "Model", "text"],
-                  ["vin", "VIN", "text"],
-                  ["licensePlate", "Plate", "text"],
-                  ["mileage", "Mileage", "number"],
-                ].map(([name, label, type]) => (
-                  <label key={name} className="text-xs font-medium text-slate-600">
-                    {label}
-                    <input
-                      name={name}
-                      type={type}
-                      min={type === "number" ? "0" : undefined}
-                      value={vehicle[name]}
-                      onChange={(event) => updateVehicle(vehicle.localId, event)}
-                      className="mt-1.5 w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                    />
-                  </label>
-                ))}
-              </div>
-            </div>
+            <CustomerVehicleEditor
+              key={vehicle.localId}
+              index={index}
+              onChange={(event) => updateVehicle(vehicle.localId, event)}
+              onDecode={() => decodeVehicleVin(vehicle)}
+              onRemove={() => removeVehicle(vehicle.localId)}
+              status={vinStatuses[vehicle.localId]}
+              vehicle={vehicle}
+            />
           ))}
         </div>
       </div>

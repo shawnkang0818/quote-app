@@ -319,15 +319,48 @@ async function findCustomerContactConflict(customer, excludedId) {
   return Customer.findOne(query).select("name");
 }
 
+async function findCustomerByContact(customer) {
+  const identities = [];
+  const phoneNormalized = normalizePhone(customer.phone);
+  const emailNormalized = normalizeEmail(customer.email);
+  if (phoneNormalized) identities.push({ phoneNormalized });
+  if (emailNormalized) identities.push({ emailNormalized });
+  return identities.length > 0 ? Customer.findOne({ $or: identities }) : null;
+}
+
+async function findCustomerVinConflict(vehicles, excludedId) {
+  // VIN is a vehicle identity, not merely descriptive text. Preventing it
+  // from appearing on multiple customer records avoids misleading history.
+  const vins = (vehicles || [])
+    .map((vehicle) => vehicle.vin)
+    .filter(Boolean);
+  if (vins.length === 0) return null;
+
+  const query = { "vehicles.vin": { $in: vins } };
+  if (excludedId) query._id = { $ne: excludedId };
+  return Customer.findOne(query).select("name vehicles.vin");
+}
+
+async function findCustomerRecordConflict(customer, excludedId) {
+  const contactConflict = await findCustomerContactConflict(customer, excludedId);
+  if (contactConflict) {
+    return `A customer named ${contactConflict.name} already uses this phone or email.`;
+  }
+
+  const vinConflict = await findCustomerVinConflict(customer.vehicles, excludedId);
+  if (vinConflict) {
+    return `This VIN is already assigned to ${vinConflict.name}.`;
+  }
+  return "";
+}
+
 // Administrators may create customer records before the first quote is saved.
 app.post("/api/customers", adminAuth, async (req, res) => {
   try {
     const customer = normalizeCustomerRecord(req.body);
-    const conflict = await findCustomerContactConflict(customer);
+    const conflict = await findCustomerRecordConflict(customer);
     if (conflict) {
-      return res.status(409).json({
-        message: `A customer named ${conflict.name} already uses this phone or email.`,
-      });
+      return res.status(409).json({ message: conflict });
     }
     return res.status(201).json(await Customer.create(customer));
   } catch (error) {
@@ -340,11 +373,9 @@ app.post("/api/customers", adminAuth, async (req, res) => {
 app.put("/api/customers/:id", adminAuth, async (req, res) => {
   try {
     const customer = normalizeCustomerRecord(req.body);
-    const conflict = await findCustomerContactConflict(customer, req.params.id);
+    const conflict = await findCustomerRecordConflict(customer, req.params.id);
     if (conflict) {
-      return res.status(409).json({
-        message: `A customer named ${conflict.name} already uses this phone or email.`,
-      });
+      return res.status(409).json({ message: conflict });
     }
 
     const updated = await Customer.findByIdAndUpdate(
@@ -558,7 +589,31 @@ async function buildQuoteSnapshot(payload) {
 // Save an immutable draft using server-authoritative prices and calculations.
 app.post("/api/quotes", async (req, res) => {
   try {
-    const savedQuote = await Quote.create(await buildQuoteSnapshot(req.body));
+    const quoteSnapshot = await buildQuoteSnapshot(req.body);
+    const hasCustomerContact = Boolean(
+      quoteSnapshot.customer?.phone || quoteSnapshot.customer?.email
+    );
+    const matchingCustomer = hasCustomerContact
+      ? await findCustomerByContact(quoteSnapshot.customer)
+      : null;
+
+    // Run the VIN ownership check before saving. Otherwise the quote could be
+    // created successfully while its customer record silently fails to sync.
+    if (hasCustomerContact && quoteSnapshot.vehicle?.vin) {
+      const vinConflict = await findCustomerVinConflict(
+        [quoteSnapshot.vehicle],
+        matchingCustomer?._id
+      );
+      if (vinConflict) {
+        const error = new Error(
+          `This VIN is already assigned to ${vinConflict.name}.`
+        );
+        error.status = 409;
+        throw error;
+      }
+    }
+
+    const savedQuote = await Quote.create(quoteSnapshot);
 
     // Contact details create or refresh a returning-customer record. Failure to
     // sync this convenience index never invalidates the quote already saved.
@@ -567,11 +622,7 @@ app.post("/api/quotes", async (req, res) => {
       try {
         const phoneNormalized = normalizePhone(customer.phone);
         const emailNormalized = normalizeEmail(customer.email);
-        const match = [];
-        if (phoneNormalized) match.push({ phoneNormalized });
-        if (emailNormalized) match.push({ emailNormalized });
-
-        let record = await Customer.findOne({ $or: match });
+        let record = matchingCustomer;
         if (!record) record = new Customer();
         record.name = customer.name;
         record.phone = customer.phone;
