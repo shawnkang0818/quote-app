@@ -95,6 +95,7 @@ function QuoteDetailPage() {
       quoteItems: quote.items,
       quoteNumber: quote.quoteNumber,
       quoteDate: quote.createdAt,
+      quoteStatus: quote.status || "draft",
       taxRate: quote.taxRate,
       vehicle: quote.vehicle,
     });

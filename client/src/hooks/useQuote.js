@@ -240,6 +240,7 @@ export function useQuote(parts, taxRate) {
         notes,
         quoteItems,
         quoteNumber: savedQuoteNumber,
+        quoteStatus,
         vehicle,
         taxRate,
       });
