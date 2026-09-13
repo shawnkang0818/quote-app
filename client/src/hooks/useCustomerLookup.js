@@ -93,12 +93,21 @@ export function useCustomerLookup(onSelectCustomer) {
     onSelectCustomer({}, {});
   };
 
+  const resetLookup = () => {
+    setSelectedCustomer(null);
+    setSelectedVehicleId("");
+    setQuery("");
+    setResults([]);
+    setErrorMessage("");
+  };
+
   return {
     errorMessage,
     hasAccess: Boolean(adminToken),
     isLoading,
     query,
     results,
+    resetLookup,
     selectedCustomer,
     selectedVehicleId,
     selectCustomer,

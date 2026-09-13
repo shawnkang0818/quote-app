@@ -7,6 +7,7 @@ function QuoteSummary({
   onGeneratePDF,
   onSaveQuote,
   quoteItems,
+  quoteNumber,
   saveMessage,
   totals,
 }) {
@@ -94,6 +95,27 @@ function QuoteSummary({
         >
           Clear current quote
         </button>
+      </div>
+
+      {/* Mirror a paper quote's identity and lifecycle at a glance. */}
+      <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-400">
+            Quote number
+          </p>
+          <p className="mt-1 truncate text-sm font-semibold text-slate-800">
+            {quoteNumber || "Assigned after save"}
+          </p>
+        </div>
+        <span
+          className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold ${
+            isSaved
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-amber-100 text-amber-700"
+          }`}
+        >
+          {isSaved ? "Saved" : "Draft"}
+        </span>
       </div>
     </aside>
   );

@@ -278,6 +278,22 @@ export function useVehicle(onDraftChange, quotePrefill) {
     onDraftChange();
   };
 
+  const resetCustomerVehicle = () => {
+    setCustomer({ name: "", phone: "", email: "" });
+    setVehicle({
+      year: "",
+      make: "",
+      model: "",
+      vin: "",
+      licensePlate: "",
+      mileage: "",
+    });
+    setMakes([]);
+    setModels([]);
+    setVehicleError("");
+    setVinMessage("");
+  };
+
   return {
     customer,
     customerName: customer.name,
@@ -289,6 +305,7 @@ export function useVehicle(onDraftChange, quotePrefill) {
     handleVehicleDetailChange,
     makes,
     models,
+    resetCustomerVehicle,
     isDecodingVin,
     loadCustomerVehicle,
     vehicle,

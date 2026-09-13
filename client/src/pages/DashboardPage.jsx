@@ -14,12 +14,17 @@ import { useQuote } from "../hooks/useQuote";
 import { useQuickServices } from "../hooks/useQuickServices";
 import { useServiceSelection } from "../hooks/useServiceSelection";
 import { useVehicle } from "../hooks/useVehicle";
+import { hasUnsavedQuote } from "../utils/quoteDraft";
 import { estimateQuickServicePrice } from "../utils/quickServicePresentation";
 
 function DashboardPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { workspaceSearch, setWorkspaceSearch } = useOutletContext();
+  const {
+    registerNewQuoteHandler,
+    workspaceSearch,
+    setWorkspaceSearch,
+  } = useOutletContext();
   const quotePrefill = location.state?.quotePrefill;
   const [catalogTab, setCatalogTab] = useState("all");
   const [showPrefillNotice, setShowPrefillNotice] = useState(() =>
@@ -73,6 +78,43 @@ function DashboardPage() {
       );
     }
   };
+
+  const handleNewQuote = () => {
+    // Saved quotes are safe to replace. Any later edit clears the saved quote
+    // number, so the helper will treat that changed workspace as a draft again.
+    const shouldConfirm = hasUnsavedQuote({
+      customer: vehicleForm.customer,
+      laborItems: quote.laborItems,
+      notes: quote.notes,
+      quoteItems: quote.quoteItems,
+      savedQuoteNumber: quote.savedQuoteNumber,
+      vehicle: vehicleForm.vehicle,
+    });
+
+    if (
+      shouldConfirm &&
+      !window.confirm("Start a new quote? Unsaved changes will be discarded.")
+    ) {
+      return;
+    }
+
+    // Reset every part of the workspace so the next quote cannot inherit
+    // customer, vehicle, service, search, or pricing details from the last one.
+    quote.clearQuote();
+    vehicleForm.resetCustomerVehicle();
+    customerLookup.resetLookup();
+    serviceSelection.clearSelection();
+    setWorkspaceSearch("");
+    setCatalogTab("all");
+    setShowPrefillNotice(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    // AppLayout owns the global New Quote button while this page owns the
+    // draft state. Re-register after renders so the handler stays current.
+    return registerNewQuoteHandler(handleNewQuote);
+  });
 
   useEffect(() => {
     if (!quotePrefill) return;
@@ -199,6 +241,7 @@ function DashboardPage() {
             })
           }
           quoteItems={quote.quoteItems}
+          quoteNumber={quote.savedQuoteNumber}
           saveMessage={quote.saveMessage}
           totals={quote.totals}
         />

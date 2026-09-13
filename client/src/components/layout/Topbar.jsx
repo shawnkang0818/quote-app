@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const pageTitles = {
   "/": "Create Quote",
@@ -10,8 +10,9 @@ const pageTitles = {
   "/settings": "Settings",
 };
 
-function Topbar({ onSearchChange, search }) {
+function Topbar({ onNewQuote, onSearchChange, search }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const searchInput = useRef(null);
   const isDashboard = location.pathname === "/";
   const title = location.pathname.startsWith("/quotes/")
@@ -30,6 +31,12 @@ function Topbar({ onSearchChange, search }) {
     window.addEventListener("keydown", focusSearch);
     return () => window.removeEventListener("keydown", focusSearch);
   }, [isDashboard]);
+
+  const handleNewQuote = () => {
+    // A mounted Dashboard handles confirmation and reset itself. From every
+    // other page, navigating home creates a fresh quote workspace.
+    if (!onNewQuote()) navigate("/");
+  };
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/95 backdrop-blur">
@@ -62,12 +69,13 @@ function Topbar({ onSearchChange, search }) {
         )}
 
         {/* The primary shortcut is available from every page in the app. */}
-        <Link
-          to="/"
+        <button
+          type="button"
+          onClick={handleNewQuote}
           className="shrink-0 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
           + New Quote
-        </Link>
+        </button>
       </div>
     </header>
   );
