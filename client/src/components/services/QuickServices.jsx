@@ -1,3 +1,6 @@
+import ServiceIcon from "./ServiceIcon";
+import { getQuickServiceTheme } from "../../utils/quickServicePresentation";
+
 function QuickServices({
   errorMessage,
   favoriteServiceIds,
@@ -35,6 +38,7 @@ function QuickServices({
           {services.map((service) => {
             const isFavorite = favoriteServiceIds.includes(service.id);
             const isSelected = selectedService?.id === service.id;
+            const theme = getQuickServiceTheme(service);
 
             return (
               <div
@@ -50,11 +54,18 @@ function QuickServices({
                   onClick={() => onSelectService(service)}
                   className="flex w-full items-center gap-2 p-2.5 pr-8 text-left"
                 >
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-[10px] font-bold text-white">
-                    {service.shortCode}
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${theme.soft} ${theme.accent}`}
+                  >
+                    <ServiceIcon name={theme.icon} className="h-6 w-6" />
                   </span>
-                  <span className="min-w-0 truncate text-sm font-semibold text-slate-900">
-                    {service.name}
+                  <span className="min-w-0">
+                    <span className="block truncate text-xs font-semibold text-slate-900">
+                      {service.name}
+                    </span>
+                    <span className="mt-0.5 block text-[11px] font-medium text-slate-500">
+                      From ${service.estimate.amount.toFixed(2)}
+                    </span>
                   </span>
                 </button>
                 <button

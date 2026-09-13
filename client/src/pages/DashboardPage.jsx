@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useOutletContext } from "react-router-dom";
 import PartsServicesCatalog from "../components/catalog/PartsServicesCatalog";
 import CustomerVehicleCard from "../components/customer/CustomerVehicleCard";
@@ -14,6 +14,7 @@ import { useQuote } from "../hooks/useQuote";
 import { useQuickServices } from "../hooks/useQuickServices";
 import { useServiceSelection } from "../hooks/useServiceSelection";
 import { useVehicle } from "../hooks/useVehicle";
+import { estimateQuickServicePrice } from "../utils/quickServicePresentation";
 
 function DashboardPage() {
   const location = useLocation();
@@ -36,7 +37,26 @@ function DashboardPage() {
   const vehicleForm = useVehicle(quote.markDraftChanged, quotePrefill);
   const customerLookup = useCustomerLookup(vehicleForm.loadCustomerVehicle);
 
-  const favoriteServices = quickServices.services.filter((service) =>
+  // Present a useful starting price without persisting a second price source.
+  // Every preview is recalculated from live inventory and labor settings.
+  const presentedServices = useMemo(
+    () =>
+      quickServices.services.map((service) => ({
+        ...service,
+        estimate: estimateQuickServicePrice(
+          service,
+          partsManager.parts,
+          business.settings.defaultHourlyRate
+        ),
+      })),
+    [
+      business.settings.defaultHourlyRate,
+      partsManager.parts,
+      quickServices.services,
+    ]
+  );
+
+  const favoriteServices = presentedServices.filter((service) =>
     favoriteJobs.favoriteServiceIds.includes(service.id)
   );
 
@@ -119,7 +139,7 @@ function DashboardPage() {
         onSelectService={selectService}
         onToggleFavorite={favoriteJobs.toggleFavorite}
         selectedService={serviceSelection.selectedService}
-        services={quickServices.services}
+        services={presentedServices}
       />
 
       {/* The workbench mirrors the shop flow: find, build, then confirm totals. */}

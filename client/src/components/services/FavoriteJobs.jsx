@@ -1,3 +1,6 @@
+import ServiceIcon from "./ServiceIcon";
+import { getQuickServiceTheme } from "../../utils/quickServicePresentation";
+
 function FavoriteJobs({ services, onSelect }) {
   return (
     <section className="h-full rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -19,16 +22,29 @@ function FavoriteJobs({ services, onSelect }) {
         </p>
       ) : (
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {services.map((service) => (
-            <button
-              key={service.id}
-              type="button"
-              onClick={() => onSelect(service)}
-              className="min-h-12 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-left text-xs font-semibold text-slate-800 transition hover:border-amber-300 hover:bg-amber-50"
-            >
-              {service.name}
-            </button>
-          ))}
+          {services.map((service) => {
+            const theme = getQuickServiceTheme(service);
+            return (
+              <button
+                key={service.id}
+                type="button"
+                onClick={() => onSelect(service)}
+                className="group min-h-20 rounded-xl border border-slate-200 bg-white px-2 py-2 text-center transition hover:-translate-y-0.5 hover:border-amber-300 hover:shadow-sm"
+              >
+                <span
+                  className={`mx-auto flex h-9 w-9 items-center justify-center rounded-lg ${theme.soft} ${theme.accent}`}
+                >
+                  <ServiceIcon name={theme.icon} className="h-6 w-6" />
+                </span>
+                <span className="mt-1.5 block truncate text-xs font-semibold text-slate-800">
+                  {service.name}
+                </span>
+                <span className="mt-0.5 block text-[10px] font-medium text-slate-500">
+                  From ${service.estimate.amount.toFixed(2)}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </section>
