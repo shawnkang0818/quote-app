@@ -115,6 +115,25 @@ export function generateQuotePDF({
     ]);
   });
 
+  const pageHeight = doc.internal.pageSize.height;
+  const pageWidth = doc.internal.pageSize.width;
+
+  const drawDraftWatermark = () => {
+    if (!documentMeta.isDraft) return;
+
+    // Paint the watermark before page content so it never obscures quote
+    // values, customer details, or terms printed over it.
+    doc.saveGraphicsState();
+    doc.setFontSize(54);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(226, 232, 240);
+    doc.text("DRAFT", pageWidth / 2, pageHeight / 2, {
+      align: "center",
+      angle: 45,
+    });
+    doc.restoreGraphicsState();
+  };
+
   autoTable(doc, {
     startY: 88,
     head: [["#", "Item / Labor", "Unit Price", "Qty/Hrs", "Line Total"]],
@@ -134,10 +153,12 @@ export function generateQuotePDF({
       3: { halign: "center", cellWidth: 24 },
       4: { halign: "right" },
     },
+    // AutoTable invokes this before drawing each table page, which keeps the
+    // watermark behind table rows even when a long quote spans multiple pages.
+    willDrawPage: drawDraftWatermark,
   });
 
   const finalY = doc.lastAutoTable.finalY || 80;
-  const pageHeight = doc.internal.pageSize.height;
 
   doc.setFont("helvetica", "normal");
   doc.text(`Parts: $${totals.partsSubtotal.toFixed(2)}`, 140, finalY + 12);
@@ -157,6 +178,7 @@ export function generateQuotePDF({
     // Long quotes can push notes onto a fresh page instead of clipping them.
     if (noteY + requiredHeight > pageHeight - 18) {
       doc.addPage();
+      drawDraftWatermark();
       noteY = 20;
     }
 
@@ -173,21 +195,8 @@ export function generateQuotePDF({
 
   // Apply a consistent footer to every page, including pages added for notes.
   const pageCount = doc.getNumberOfPages();
-  const pageWidth = doc.internal.pageSize.width;
   for (let page = 1; page <= pageCount; page += 1) {
     doc.setPage(page);
-
-    if (documentMeta.isDraft) {
-      // A pale diagonal watermark makes previews unmistakable without hiding
-      // table values or customer details underneath it.
-      doc.setFontSize(54);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(226, 232, 240);
-      doc.text("DRAFT", pageWidth / 2, pageHeight / 2, {
-        align: "center",
-        angle: 45,
-      });
-    }
 
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");

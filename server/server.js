@@ -44,10 +44,18 @@ import {
   normalizeVinDecodeResult,
 } from "./utils/vinDecoder.js";
 import { normalizePart } from "./utils/parts.js";
+import { createRequestRateLimit } from "./middleware/requestRateLimit.js";
+import { createDateRangeFilter } from "./utils/queryFilters.js";
 
 dotenv.config();
 
 const app = express();
+
+// Fly Proxy supplies the original client address through one trusted proxy.
+// Disabling the framework signature also avoids advertising implementation
+// details in every public response.
+app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
 // Production deployments can provide their own comma-separated frontend
 // origins while local development remains available on localhost.
@@ -60,6 +68,30 @@ const allowedOrigins = (
 
 app.use(cors({ origin: allowedOrigins }));
 app.use(express.json({ limit: "100kb" }));
+
+// These baseline headers protect both API responses and error messages without
+// changing the JSON contract consumed by the React client.
+app.use((_req, res, next) => {
+  res.set({
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    "Referrer-Policy": "no-referrer",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+  });
+  next();
+});
+
+const adminLoginRateLimit = createRequestRateLimit({
+  limit: 10,
+  windowMs: 15 * 60 * 1000,
+  message: "Too many login attempts. Please wait 15 minutes and try again.",
+});
+
+const quoteCreationRateLimit = createRequestRateLimit({
+  limit: 60,
+  windowMs: 60 * 60 * 1000,
+  message: "Too many quotes were submitted. Please try again later.",
+});
 
 function sendDatabaseError(res, error) {
   // Validation and malformed IDs are client errors; unexpected database
@@ -89,7 +121,16 @@ app.get("/", (req, res) => {
   res.send("API is running...");
 });
 
-app.post("/api/admin/login", (req, res) => {
+// Fly health checks can verify both the process and its Atlas connection.
+app.get("/api/health", (_req, res) => {
+  const databaseConnected = mongoose.connection.readyState === 1;
+  return res.status(databaseConnected ? 200 : 503).json({
+    status: databaseConnected ? "ok" : "unavailable",
+    database: databaseConnected ? "connected" : "disconnected",
+  });
+});
+
+app.post("/api/admin/login", adminLoginRateLimit, (req, res) => {
   try {
     const session = createAdminSession(req.body?.password);
     if (!session) {
@@ -683,7 +724,7 @@ async function buildQuoteSnapshot(payload) {
 }
 
 // Save an immutable quote snapshot using server-authoritative prices and totals.
-app.post("/api/quotes", async (req, res) => {
+app.post("/api/quotes", quoteCreationRateLimit, async (req, res) => {
   try {
     const quoteSnapshot = await buildQuoteSnapshot(req.body);
     // Validate customer/VIN ownership before the quote is committed.
@@ -747,15 +788,8 @@ app.get("/api/quotes", adminAuth, async (req, res) => {
       query.status =
         req.query.status === "draft" ? { $in: ["draft", null] } : "final";
     }
-    if (req.query.from || req.query.to) {
-      query.createdAt = {};
-      if (req.query.from) {
-        query.createdAt.$gte = new Date(`${req.query.from}T00:00:00.000Z`);
-      }
-      if (req.query.to) {
-        query.createdAt.$lte = new Date(`${req.query.to}T23:59:59.999Z`);
-      }
-    }
+    const createdAt = createDateRangeFilter(req.query.from, req.query.to);
+    if (createdAt) query.createdAt = createdAt;
 
     // Fetch the page and its total count together to reduce response time.
     // The hard limit above prevents oversized history responses.
@@ -903,6 +937,14 @@ app.delete("/api/quotes/:id", adminAuth, async (req, res) => {
   }
 });
 
+// Unknown API URLs return JSON so the shared frontend API client can display a
+// consistent message instead of receiving Express's default HTML response.
+app.use("/api", (_req, res) => {
+  return res.status(404).json({ message: "API endpoint not found" });
+});
+
+let httpServer;
+
 async function startServer() {
   if (!process.env.MONGO_URI) {
     throw new Error("MONGO_URI is not configured");
@@ -913,8 +955,32 @@ async function startServer() {
     serverSelectionTimeoutMS: 10000,
   });
   console.log("MongoDB connected");
-  app.listen(PORT, () => {
+  // An explicit public bind works locally and is required behind Fly Proxy.
+  httpServer = app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
+  });
+}
+
+async function shutdown(signal) {
+  // Fly sends SIGTERM during a deploy. Stop accepting new work, then close the
+  // Atlas connection so in-flight requests can finish without abrupt errors.
+  console.log(`${signal} received. Shutting down gracefully.`);
+  if (httpServer) {
+    await new Promise((resolve) => httpServer.close(resolve));
+  }
+  await mongoose.disconnect();
+}
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.once(signal, () => {
+    shutdown(signal)
+      .then(() => {
+        process.exitCode = 0;
+      })
+      .catch((error) => {
+        console.error("Graceful shutdown failed:", error.message);
+        process.exitCode = 1;
+      });
   });
 }
 
