@@ -19,7 +19,7 @@ function Sidebar() {
 
   return (
     <aside className="border-b border-slate-800 bg-slate-950 text-white lg:sticky lg:top-0 lg:h-screen lg:w-56 lg:shrink-0 lg:border-b-0">
-      <div className="flex items-center justify-between px-4 py-4 lg:block lg:px-4 lg:py-5">
+      <div className="flex flex-col gap-3 px-3 py-3 sm:px-4 lg:block lg:px-4 lg:py-5">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-lg font-black shadow-lg shadow-blue-950/30">
             G
@@ -30,7 +30,9 @@ function Sidebar() {
           </div>
         </div>
 
-        <nav className="flex max-w-full gap-2 overflow-x-auto lg:mt-8 lg:flex-col lg:overflow-visible">
+        {/* Phones use a horizontally scrollable navigation strip; the full
+            vertical sidebar returns at the desktop breakpoint. */}
+        <nav className="no-scrollbar flex w-full max-w-full gap-2 overflow-x-auto pb-1 lg:mt-8 lg:flex-col lg:overflow-visible lg:pb-0">
           {navigation.map((item) => (
             <NavLink
               key={item.to}

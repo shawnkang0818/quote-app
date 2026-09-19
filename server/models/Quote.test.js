@@ -21,14 +21,15 @@ test("new quotes default to draft status", () => {
   assert.equal(createValidQuote().status, "draft");
 });
 
-test("quote status accepts only draft or final", () => {
+test("quote status accepts only draft or final", async () => {
   const quote = createValidQuote({ status: "pending" });
-  const validationError = quote.validateSync();
-
-  assert.ok(validationError.errors.status);
+  await assert.rejects(
+    quote.validate(),
+    (error) => Boolean(error.errors.status)
+  );
 });
 
-test("stores custom quote lines without an inventory reference", () => {
+test("stores custom quote lines without an inventory reference", async () => {
   const quote = createValidQuote({
     items: [
       {
@@ -43,7 +44,7 @@ test("stores custom quote lines without an inventory reference", () => {
     total: 13.59,
   });
 
-  assert.equal(quote.validateSync(), undefined);
+  await assert.doesNotReject(quote.validate());
   assert.equal(quote.items[0].partId, undefined);
   assert.equal(quote.items[0].isCustom, true);
 });

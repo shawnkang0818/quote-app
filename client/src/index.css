@@ -14,13 +14,11 @@
 }
 
 html {
-  min-width: 320px;
   min-height: 100%;
   background: #f1f5f9;
 }
 
 body {
-  min-width: 320px;
   min-height: 100vh;
   margin: 0;
 }
@@ -38,4 +36,17 @@ button {
 
 #root {
   min-height: 100vh;
+}
+
+@layer utilities {
+  /* Keep swipe navigation available on phones without displaying a heavy
+     platform scrollbar underneath the compact tab strip. */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }

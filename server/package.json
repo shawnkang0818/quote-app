@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "main": "index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
   "scripts": {
     "start": "node server.js",
     "migrate:quotes": "node scripts/backfillQuotes.js",

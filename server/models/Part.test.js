@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import Part from "./Part.js";
 
-test("accepts optional inventory metadata and a whole-number stock threshold", () => {
+test("accepts optional inventory metadata and a whole-number stock threshold", async () => {
   const part = new Part({
     name: "Oil Filter",
     partNumber: "PH4967",
@@ -13,10 +13,10 @@ test("accepts optional inventory metadata and a whole-number stock threshold", (
     lowStockThreshold: 3,
   });
 
-  assert.equal(part.validateSync(), undefined);
+  await assert.doesNotReject(part.validate());
 });
 
-test("rejects negative or fractional low-stock thresholds", () => {
+test("rejects negative or fractional low-stock thresholds", async () => {
   const negative = new Part({
     name: "Battery",
     price: 99,
@@ -30,6 +30,12 @@ test("rejects negative or fractional low-stock thresholds", () => {
     lowStockThreshold: 2.5,
   });
 
-  assert.ok(negative.validateSync()?.errors.lowStockThreshold);
-  assert.ok(fractional.validateSync()?.errors.lowStockThreshold);
+  await assert.rejects(
+    negative.validate(),
+    (error) => Boolean(error.errors.lowStockThreshold)
+  );
+  await assert.rejects(
+    fractional.validate(),
+    (error) => Boolean(error.errors.lowStockThreshold)
+  );
 });

@@ -19,7 +19,7 @@ function QuoteSummary({
   const hasQuoteContent = quoteItems.length > 0 || laborItems.length > 0;
 
   return (
-    <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-20">
+    <aside className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:sticky lg:top-20">
       <div className="border-b border-slate-200 pb-4">
         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-blue-600">
           Current quote

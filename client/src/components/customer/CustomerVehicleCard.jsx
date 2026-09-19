@@ -62,7 +62,7 @@ function CustomerVehicleCard({
       />
 
       {hasSelectedCustomer && !isEditingDetails && (
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 sm:grid-cols-2 md:grid-cols-4">
           <span className="truncate">
             <strong className="text-slate-800">Vehicle:</strong>{" "}
             {[vehicle.year, vehicle.make, vehicle.model]
@@ -98,7 +98,7 @@ function CustomerVehicleCard({
           </button>
         </div>
       )}
-      <div className="grid grid-cols-2 gap-2.5 xl:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
         <label className="block">
           <span className="mb-2 block text-sm font-medium text-slate-700">
             Customer name

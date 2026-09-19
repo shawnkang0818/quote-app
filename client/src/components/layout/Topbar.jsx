@@ -74,7 +74,8 @@ function Topbar({ onNewQuote, onSearchChange, search }) {
           onClick={handleNewQuote}
           className="shrink-0 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
         >
-          + New Quote
+          <span className="sm:hidden">+ Quote</span>
+          <span className="hidden sm:inline">+ New Quote</span>
         </button>
       </div>
     </header>

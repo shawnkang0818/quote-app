@@ -68,7 +68,7 @@ function QuoteBuilder({
   };
 
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="mb-3 flex items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold text-slate-950">Quote Builder</h2>
@@ -86,7 +86,10 @@ function QuoteBuilder({
           No quote items selected
         </div>
       ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200">
+        <div className="overflow-x-auto rounded-xl border border-slate-200">
+          {/* Preserve readable controls on narrow phones. Only this quote list
+              scrolls horizontally instead of forcing the whole page wider. */}
+          <div className="min-w-[500px]">
           <div className="grid grid-cols-[minmax(0,1fr)_64px_76px_76px_28px] items-center gap-2 bg-slate-50 px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
             <span>Item</span>
             <span className="text-center">Qty/Hrs</span>
@@ -195,6 +198,7 @@ function QuoteBuilder({
                 />
               </article>
             ))}
+          </div>
           </div>
         </div>
       )}

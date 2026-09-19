@@ -1,0 +1,15 @@
+# Build only the React workspace and publish Vite's production output.
+[build]
+  base = "client"
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20.19.5"
+
+# React Router handles application routes in the browser. This fallback keeps
+# direct visits such as /quotes and /settings from returning a Netlify 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
