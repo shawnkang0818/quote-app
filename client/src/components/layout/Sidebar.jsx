@@ -6,6 +6,7 @@ const navigation = [
   { label: "Customers", shortLabel: "CU", to: "/customers" },
   { label: "Inventory", shortLabel: "IN", to: "/inventory" },
   { label: "Services", shortLabel: "QS", to: "/services" },
+  { label: "Suppliers", shortLabel: "SP", to: "/supplier-prices" },
   { label: "Settings", shortLabel: "SE", to: "/settings" },
 ];
 

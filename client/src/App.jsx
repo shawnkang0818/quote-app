@@ -9,6 +9,7 @@ import CustomersPage from "./pages/CustomersPage";
 import CustomerDetailPage from "./pages/CustomerDetailPage";
 import InventoryPage from "./pages/InventoryPage";
 import ServiceTemplatesPage from "./pages/ServiceTemplatesPage";
+import SupplierPricesPage from "./pages/SupplierPricesPage";
 
 // A data router enables navigation blocking for unsaved quote work while
 // preserving the same URLs and shared AppLayout used throughout the app.
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
       { path: "/customers/:customerId", element: <CustomerDetailPage /> },
       { path: "/inventory", element: <InventoryPage /> },
       { path: "/services", element: <ServiceTemplatesPage /> },
+      { path: "/supplier-prices", element: <SupplierPricesPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
