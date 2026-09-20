@@ -2,6 +2,7 @@ import { useState } from "react";
 import CustomItemForm from "./CustomItemForm";
 import LaborSection from "./LaborSection";
 import QuoteNotes from "./QuoteNotes";
+import SupplierPriceSuggestions from "./SupplierPriceSuggestions";
 
 function RemoveButton({ label, onClick }) {
   return (
@@ -49,6 +50,7 @@ function QuoteBuilder({
   notes,
   onAddCustomItem,
   onAddLabor,
+  onApplySupplierPrice,
   onDecreaseQuantity,
   onIncreaseQuantity,
   onRemove,
@@ -57,6 +59,7 @@ function QuoteBuilder({
   onUpdateItemPrice,
   onUpdateLabor,
   quoteItems,
+  vehicle,
 }) {
   const [activePanel, setActivePanel] = useState(null);
   const itemCount = quoteItems.length + laborItems.length;
@@ -101,10 +104,8 @@ function QuoteBuilder({
 
           <div className="divide-y divide-slate-200">
             {quoteItems.map((item) => (
-              <article
-                key={item._id}
-                className="grid grid-cols-[minmax(0,1fr)_64px_76px_76px_28px] items-center gap-2 px-3 py-3"
-              >
+              <div key={item._id}>
+                <article className="grid grid-cols-[minmax(0,1fr)_64px_76px_76px_28px] items-center gap-2 px-3 py-3">
                 <div className="min-w-0">
                   <h3 className="truncate text-sm font-semibold text-slate-900">
                     {item.name}
@@ -113,14 +114,18 @@ function QuoteBuilder({
                     className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
                       item.pricePending
                         ? "bg-amber-50 text-amber-700"
+                        : item.source === "supplier"
+                          ? "bg-emerald-50 text-emerald-700"
                         : item.isCustom
-                        ? "bg-violet-50 text-violet-700"
-                        : "bg-blue-50 text-blue-700"
+                          ? "bg-violet-50 text-violet-700"
+                          : "bg-blue-50 text-blue-700"
                     }`}
                   >
                     {item.pricePending
                       ? "Price required"
-                      : item.isCustom
+                      : item.source === "supplier"
+                        ? "Supplier price"
+                        : item.isCustom
                         ? "Custom"
                         : "Part"}
                   </span>
@@ -153,7 +158,7 @@ function QuoteBuilder({
                   </button>
                 </div>
 
-                {item.source === "quick-service" ? (
+                {["quick-service", "supplier"].includes(item.source) ? (
                   <input
                     type="number"
                     min="0.01"
@@ -180,7 +185,17 @@ function QuoteBuilder({
                   label={`Remove ${item.name}`}
                   onClick={() => onRemove(item._id)}
                 />
-              </article>
+                </article>
+                {item.pricePending && (
+                  <SupplierPriceSuggestions
+                    item={item}
+                    onApply={(suggestion) =>
+                      onApplySupplierPrice(item._id, suggestion)
+                    }
+                    vehicle={vehicle}
+                  />
+                )}
+              </div>
             ))}
 
             {laborItems.map((item) => (

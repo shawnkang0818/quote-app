@@ -175,6 +175,39 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
     markDraftChanged();
   };
 
+  const applySupplierPrice = (id, suggestion) => {
+    const suggestedPrice = Number(suggestion.listPrice);
+    if (!Number.isFinite(suggestedPrice) || suggestedPrice <= 0) {
+      setQuoteError("This supplier suggestion does not contain a valid selling price.");
+      return;
+    }
+
+    // Applying a suggestion remains an explicit employee action. The linked
+    // supplier record lets the server verify that the source is still active
+    // when the quote is saved, while the selling price remains editable.
+    setQuoteItems((items) =>
+      items.map((item) =>
+        item._id === id
+          ? {
+              ...item,
+              price: suggestedPrice,
+              pricePending: false,
+              source: "supplier",
+              sourceLabel:
+                [suggestion.brand, suggestion.supplierPartNumber]
+                  .filter(Boolean)
+                  .join(" · ") || "Saved supplier price",
+              supplierPriceId: suggestion.id,
+              supplierPartNumber: suggestion.supplierPartNumber,
+              brand: suggestion.brand,
+            }
+          : item
+      )
+    );
+    setQuoteError("");
+    markDraftChanged();
+  };
+
   const increaseQuantity = (id) => {
     const selectedItem = quoteItems.find((item) => item._id === id);
     if (
@@ -362,6 +395,9 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
           requirementLabel: item.requirementLabel,
           source: item.source,
           sourceLabel: item.sourceLabel,
+          supplierPriceId: item.supplierPriceId,
+          supplierPartNumber: item.supplierPartNumber,
+          brand: item.brand,
         })),
         laborItems: laborItems.map(({ description, hours, hourlyRate }) => ({
           description,
@@ -403,6 +439,7 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
     addCustomItem,
     addLabor,
     addPart,
+    applySupplierPrice,
     applyService,
     clearQuote,
     decreaseQuantity,

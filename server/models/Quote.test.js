@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import Quote from "./Quote.js";
+import mongoose from "mongoose";
 
 function createValidQuote(overrides = {}) {
   return new Quote({
@@ -66,4 +67,33 @@ test("stores unresolved Quick Service parts in a working draft", async () => {
   await assert.doesNotReject(quote.validate());
   assert.equal(quote.items[0].pricePending, true);
   assert.equal(quote.items[0].source, "quick-service");
+});
+
+test("stores a supplier-price reference on a resolved custom line", async () => {
+  const supplierPriceId = new mongoose.Types.ObjectId();
+  const quote = new Quote({
+    quoteNumber: "QT-SUPPLIER-1",
+    items: [
+      {
+        isCustom: true,
+        name: "Air Filter",
+        price: 24.99,
+        quoteQuantity: 1,
+        source: "supplier",
+        sourceLabel: "Saved supplier price",
+        supplierPriceId,
+        supplierPartNumber: "AF-1",
+        brand: "Example Brand",
+      },
+    ],
+    partsSubtotal: 24.99,
+    laborTotal: 0,
+    subtotal: 24.99,
+    taxRate: 0.0875,
+    taxAmount: 2.19,
+    total: 27.18,
+  });
+
+  await assert.doesNotReject(quote.validate());
+  assert.equal(String(quote.items[0].supplierPriceId), String(supplierPriceId));
 });

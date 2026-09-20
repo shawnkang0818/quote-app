@@ -225,6 +225,7 @@ function DashboardPage() {
           notes={quote.notes}
           onAddCustomItem={quote.addCustomItem}
           onAddLabor={quote.addLabor}
+          onApplySupplierPrice={quote.applySupplierPrice}
           onDecreaseQuantity={quote.decreaseQuantity}
           onIncreaseQuantity={quote.increaseQuantity}
           onRemove={quote.removePart}
@@ -233,6 +234,7 @@ function DashboardPage() {
           onUpdateItemPrice={quote.updateItemPrice}
           onUpdateLabor={quote.updateLabor}
           quoteItems={quote.quoteItems}
+          vehicle={vehicleForm.vehicle}
         />
 
         <QuoteSummary

@@ -84,6 +84,12 @@ const quoteSchema = new mongoose.Schema(
         },
         sourceLabel: { type: String, trim: true, maxlength: 160 },
         requirementLabel: { type: String, trim: true, maxlength: 160 },
+        supplierPriceId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "SupplierPrice",
+        },
+        supplierPartNumber: { type: String, trim: true, maxlength: 120 },
+        brand: { type: String, trim: true, maxlength: 120 },
         name: { type: String, required: true, trim: true },
         price: { type: Number, required: true, min: 0 },
         quoteQuantity: { type: Number, required: true, min: 1 },

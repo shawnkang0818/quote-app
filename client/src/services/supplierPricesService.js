@@ -34,3 +34,13 @@ export function updateSupplierPrice(id, payload, adminToken) {
     body: JSON.stringify(payload),
   });
 }
+
+// This public quote-workspace endpoint intentionally returns no supplier cost
+// or supplier identity; it exposes only customer-facing saved-price options.
+export function getSupplierPriceSuggestions({ search, vehicle = {} }) {
+  const params = new URLSearchParams({ search });
+  ["year", "make", "model", "engine"].forEach((field) => {
+    if (vehicle[field]) params.set(field, vehicle[field]);
+  });
+  return apiRequest(`/supplier-price-suggestions?${params.toString()}`);
+}

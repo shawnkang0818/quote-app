@@ -49,9 +49,13 @@ import { normalizePart } from "./utils/parts.js";
 import { createRequestRateLimit } from "./middleware/requestRateLimit.js";
 import { createDateRangeFilter } from "./utils/queryFilters.js";
 import {
+  buildSupplierSuggestionQuery,
   buildSupplierPriceQuery,
+  getSupplierPriceFitmentScore,
+  isSupplierPriceVehicleMatch,
   normalizeSupplierPrice,
   parseSupplierPricePagination,
+  toPublicSupplierSuggestion,
 } from "./utils/supplierPrices.js";
 
 dotenv.config();
@@ -98,6 +102,12 @@ const quoteCreationRateLimit = createRequestRateLimit({
   limit: 60,
   windowMs: 60 * 60 * 1000,
   message: "Too many quotes were submitted. Please try again later.",
+});
+
+const supplierSuggestionRateLimit = createRequestRateLimit({
+  limit: 120,
+  windowMs: 15 * 60 * 1000,
+  message: "Too many supplier price searches. Please try again later.",
 });
 
 function sendDatabaseError(res, error) {
@@ -394,6 +404,44 @@ app.delete("/api/supplier-prices/:id", adminAuth, async (req, res) => {
     return sendDatabaseError(res, error);
   }
 });
+
+// Quote creation is available without an admin session, so this endpoint
+// exposes only safe selling-price suggestions. Wholesale costs, supplier
+// identity, and source URLs never leave the protected supplier-price API.
+app.get(
+  "/api/supplier-price-suggestions",
+  supplierSuggestionRateLimit,
+  async (req, res) => {
+    try {
+      const query = buildSupplierSuggestionQuery(req.query.search);
+      const vehicle = {
+        year: req.query.year,
+        make: req.query.make,
+        model: req.query.model,
+        engine: req.query.engine,
+      };
+      const candidates = await SupplierPrice.find(query)
+        .sort({ retrievedAt: -1 })
+        .limit(50);
+
+      const suggestions = candidates
+        .filter((price) => isSupplierPriceVehicleMatch(price.vehicle, vehicle))
+        .sort((left, right) => {
+          const fitmentDifference =
+            getSupplierPriceFitmentScore(right.vehicle) -
+            getSupplierPriceFitmentScore(left.vehicle);
+          if (fitmentDifference !== 0) return fitmentDifference;
+          return new Date(right.retrievedAt) - new Date(left.retrievedAt);
+        })
+        .slice(0, 5)
+        .map(toPublicSupplierSuggestion);
+
+      return res.json({ suggestions });
+    } catch (error) {
+      return sendDatabaseError(res, error);
+    }
+  }
+);
 
 // Customer records contain private contact and vehicle identifiers, so search
 // access is restricted until full employee accounts replace the admin session.
@@ -753,6 +801,26 @@ async function buildQuoteSnapshot(payload) {
           error.status = 400;
           throw error;
         }
+        let supplierReference;
+        if (item.source === "supplier") {
+          if (!mongoose.isValidObjectId(item.supplierPriceId)) {
+            const error = new Error("A valid supplier price reference is required");
+            error.status = 400;
+            throw error;
+          }
+          supplierReference = await SupplierPrice.findOne({
+            _id: item.supplierPriceId,
+            active: true,
+            $or: [{ expiresAt: null }, { expiresAt: { $gt: new Date() } }],
+          });
+          if (!supplierReference) {
+            const error = new Error(
+              "The selected supplier price is no longer available"
+            );
+            error.status = 400;
+            throw error;
+          }
+        }
         return {
           isCustom: true,
           name: item.name.trim(),
@@ -761,7 +829,12 @@ async function buildQuoteSnapshot(payload) {
           quoteQuantity: Number(item.quoteQuantity),
           requirementLabel: item.requirementLabel?.trim() || undefined,
           source: item.source || "manual",
-          sourceLabel: item.sourceLabel?.trim() || undefined,
+          sourceLabel: supplierReference
+            ? "Saved supplier price"
+            : item.sourceLabel?.trim() || undefined,
+          supplierPriceId: supplierReference?._id,
+          supplierPartNumber: supplierReference?.supplierPartNumber,
+          brand: supplierReference?.brand,
         };
       }
 

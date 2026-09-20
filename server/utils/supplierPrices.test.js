@@ -1,9 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  buildSupplierSuggestionQuery,
   buildSupplierPriceQuery,
+  getSupplierPriceFitmentScore,
+  isSupplierPriceVehicleMatch,
   normalizeSupplierPrice,
   parseSupplierPricePagination,
+  toPublicSupplierSuggestion,
 } from "./supplierPrices.js";
 
 test("normalizes a supplier offer while dropping unknown fields", () => {
@@ -86,4 +90,58 @@ test("bounds supplier price pagination", () => {
     page: 1,
     limit: 100,
   });
+});
+
+test("builds an active and unexpired public suggestion query", () => {
+  const query = buildSupplierSuggestionQuery(
+    "Air Filter",
+    new Date("2026-09-20T12:00:00Z")
+  );
+  assert.equal(query.active, true);
+  assert.deepEqual(query.availability, { $nin: ["out_of_stock"] });
+  assert.equal(query.$and[1].$or[0].partName.$regex, "Air Filter");
+});
+
+test("matches universal or exact vehicle fitment and scores specificity", () => {
+  const vehicle = { year: "2020", make: "Toyota", model: "Camry" };
+  assert.equal(isSupplierPriceVehicleMatch({}, vehicle), true);
+  assert.equal(
+    isSupplierPriceVehicleMatch(
+      { year: "2020", make: "toyota", model: "CAMRY" },
+      vehicle
+    ),
+    true
+  );
+  assert.equal(
+    isSupplierPriceVehicleMatch({ make: "Honda" }, vehicle),
+    false
+  );
+  assert.equal(
+    getSupplierPriceFitmentScore({ year: "2020", make: "Toyota", model: "Camry" }),
+    3
+  );
+});
+
+test("removes supplier cost and identity from public suggestions", () => {
+  const suggestion = toPublicSupplierSuggestion({
+    _id: "price-1",
+    supplierName: "Private Supplier",
+    sourceUrl: "https://supplier.example/item",
+    cost: 10,
+    partName: "Air Filter",
+    supplierPartNumber: "AF-1",
+    brand: "Example",
+    category: "Filters",
+    listPrice: 24.99,
+    currency: "USD",
+    availability: "in_stock",
+    quantityAvailable: 5,
+    vehicle: {},
+    retrievedAt: new Date("2026-09-20T12:00:00Z"),
+  });
+
+  assert.equal(suggestion.listPrice, 24.99);
+  assert.equal(Object.hasOwn(suggestion, "cost"), false);
+  assert.equal(Object.hasOwn(suggestion, "supplierName"), false);
+  assert.equal(Object.hasOwn(suggestion, "sourceUrl"), false);
 });

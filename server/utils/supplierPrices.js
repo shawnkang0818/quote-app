@@ -139,3 +139,68 @@ export function parseSupplierPricePagination(params = {}) {
   const limit = Math.min(100, Math.max(1, Number.parseInt(params.limit, 10) || 25));
   return { page, limit };
 }
+
+// The quote workspace receives only customer-facing pricing fields. Supplier
+// cost, supplier identity, and source URLs remain behind the admin endpoint.
+export function buildSupplierSuggestionQuery(search, now = new Date()) {
+  const cleanSearch = cleanText(search);
+  if (!cleanSearch) {
+    const error = new Error("A part name or number is required");
+    error.status = 400;
+    throw error;
+  }
+  const regex = { $regex: escapeRegex(cleanSearch), $options: "i" };
+  return {
+    active: true,
+    listPrice: { $ne: null },
+    availability: { $nin: ["out_of_stock"] },
+    $and: [
+      { $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] },
+      {
+        $or: [
+          { partName: regex },
+          { supplierPartNumber: regex },
+          { brand: regex },
+          { category: regex },
+        ],
+      },
+    ],
+  };
+}
+
+function normalizedEqual(left, right) {
+  return cleanText(left).toLowerCase() === cleanText(right).toLowerCase();
+}
+
+export function isSupplierPriceVehicleMatch(fitment = {}, vehicle = {}) {
+  return ["year", "make", "model", "engine"].every((field) => {
+    const requiredValue = cleanText(fitment[field]);
+    if (!requiredValue) return true;
+    const selectedValue = cleanText(vehicle[field]);
+    return Boolean(selectedValue) && normalizedEqual(requiredValue, selectedValue);
+  });
+}
+
+export function getSupplierPriceFitmentScore(fitment = {}) {
+  return ["year", "make", "model", "engine"].filter((field) =>
+    cleanText(fitment[field])
+  ).length;
+}
+
+export function toPublicSupplierSuggestion(price) {
+  const record = price?.toObject ? price.toObject() : price;
+  return {
+    id: String(record._id),
+    partName: record.partName,
+    supplierPartNumber: record.supplierPartNumber,
+    brand: record.brand,
+    category: record.category,
+    listPrice: record.listPrice,
+    currency: record.currency,
+    availability: record.availability,
+    quantityAvailable: record.quantityAvailable,
+    vehicle: record.vehicle,
+    retrievedAt: record.retrievedAt,
+    requiresConfirmation: record.requiresConfirmation !== false,
+  };
+}
