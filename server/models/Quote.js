@@ -73,6 +73,17 @@ const quoteSchema = new mongoose.Schema(
         // Custom lines have no inventory reference and retain their quoted
         // name and price; normal part lines remain server-authoritative.
         isCustom: { type: Boolean, default: false },
+        // Quick Services may create an unresolved one-off part when the shop
+        // does not track it in inventory. Drafts retain the row, while API
+        // validation prevents unresolved prices from reaching Final status.
+        pricePending: { type: Boolean, default: false },
+        source: {
+          type: String,
+          enum: ["inventory", "manual", "quick-service", "history", "supplier"],
+          default: "manual",
+        },
+        sourceLabel: { type: String, trim: true, maxlength: 160 },
+        requirementLabel: { type: String, trim: true, maxlength: 160 },
         name: { type: String, required: true, trim: true },
         price: { type: Number, required: true, min: 0 },
         quoteQuantity: { type: Number, required: true, min: 1 },

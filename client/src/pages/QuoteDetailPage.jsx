@@ -89,6 +89,12 @@ function QuoteDetailPage() {
     );
 
   const handleGeneratePDF = async () => {
+    if (quote.items.some((item) => item.pricePending)) {
+      setActionError(
+        "Edit this Draft and resolve every price-required part before generating a PDF."
+      );
+      return;
+    }
     // jsPDF is relatively large, so load it only when a user requests a PDF.
     const { generateQuotePDF } = await import("../utils/generateQuotePDF");
     generateQuotePDF({
@@ -315,9 +321,16 @@ function QuoteDetailPage() {
               <span>
                 {item.isCustom ? "Custom: " : ""}
                 {item.name} × {item.quoteQuantity}
+                {item.pricePending && (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
+                    Price required
+                  </span>
+                )}
               </span>
               <span className="font-semibold">
-                {money(item.price * item.quoteQuantity)}
+                {item.pricePending
+                  ? "TBD"
+                  : money(item.price * item.quoteQuantity)}
               </span>
             </div>
           ))}

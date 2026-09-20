@@ -230,6 +230,7 @@ function DashboardPage() {
           onRemove={quote.removePart}
           onRemoveLabor={quote.removeLabor}
           onUpdateNote={quote.updateNote}
+          onUpdateItemPrice={quote.updateItemPrice}
           onUpdateLabor={quote.updateLabor}
           quoteItems={quote.quoteItems}
         />

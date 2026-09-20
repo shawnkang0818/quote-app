@@ -37,6 +37,15 @@ export function isValidCustomItem(item) {
   );
 }
 
+// Pending part prices are permitted only while a quote is still a working
+// draft. This keeps incomplete service packages visible without allowing a
+// customer-facing Final quote to silently omit a required part charge.
+export function hasPendingPartPrices(items = []) {
+  return items.some(
+    (item) => item.isCustom === true && item.pricePending === true
+  );
+}
+
 // New quotes may be saved as working drafts or finalized customer-facing
 // snapshots. Reject every other value before it reaches the database model.
 export function normalizeQuoteStatus(status = "draft") {

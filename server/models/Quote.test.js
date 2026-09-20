@@ -48,3 +48,22 @@ test("stores custom quote lines without an inventory reference", async () => {
   assert.equal(quote.items[0].partId, undefined);
   assert.equal(quote.items[0].isCustom, true);
 });
+
+test("stores unresolved Quick Service parts in a working draft", async () => {
+  const quote = createValidQuote({
+    items: [
+      {
+        isCustom: true,
+        name: "Cabin air filter",
+        price: 0,
+        pricePending: true,
+        quoteQuantity: 1,
+        source: "quick-service",
+      },
+    ],
+  });
+
+  await assert.doesNotReject(quote.validate());
+  assert.equal(quote.items[0].pricePending, true);
+  assert.equal(quote.items[0].source, "quick-service");
+});

@@ -54,6 +54,7 @@ function QuoteBuilder({
   onRemove,
   onRemoveLabor,
   onUpdateNote,
+  onUpdateItemPrice,
   onUpdateLabor,
   quoteItems,
 }) {
@@ -110,13 +111,24 @@ function QuoteBuilder({
                   </h3>
                   <span
                     className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-semibold ${
-                      item.isCustom
+                      item.pricePending
+                        ? "bg-amber-50 text-amber-700"
+                        : item.isCustom
                         ? "bg-violet-50 text-violet-700"
                         : "bg-blue-50 text-blue-700"
                     }`}
                   >
-                    {item.isCustom ? "Custom" : "Part"}
+                    {item.pricePending
+                      ? "Price required"
+                      : item.isCustom
+                        ? "Custom"
+                        : "Part"}
                   </span>
+                  {item.sourceLabel && (
+                    <p className="mt-1 truncate text-[10px] text-slate-400">
+                      From {item.sourceLabel}
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-center rounded-lg border border-slate-200 bg-white">
@@ -141,11 +153,28 @@ function QuoteBuilder({
                   </button>
                 </div>
 
-                <p className="text-right text-xs text-slate-600">
-                  ${Number(item.price).toFixed(2)}
-                </p>
+                {item.source === "quick-service" ? (
+                  <input
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={item.pricePending ? "" : item.price}
+                    onChange={(event) =>
+                      onUpdateItemPrice(item._id, event.target.value)
+                    }
+                    placeholder="Price"
+                    aria-label={`${item.name} selling price`}
+                    className="w-full rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5 text-right text-xs outline-none focus:border-amber-500"
+                  />
+                ) : (
+                  <p className="text-right text-xs text-slate-600">
+                    ${Number(item.price).toFixed(2)}
+                  </p>
+                )}
                 <p className="text-right text-xs font-bold text-slate-950">
-                  ${(item.price * item.quoteQuantity).toFixed(2)}
+                  {item.pricePending
+                    ? "TBD"
+                    : `$${(item.price * item.quoteQuantity).toFixed(2)}`}
                 </p>
                 <RemoveButton
                   label={`Remove ${item.name}`}

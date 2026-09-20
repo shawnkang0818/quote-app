@@ -36,6 +36,33 @@ export function applyQuickService({
       Number(matchedPart.quantity) <= existingQuantity
     ) {
       missingParts.push(requirement.label);
+
+      // Keep the required part visible instead of silently producing a
+      // labor-only quote. A zero-valued pending row is safe in a Draft, but
+      // must receive an explicit selling price before PDF or Final output.
+      const pendingIndex = nextQuoteItems.findIndex(
+        (item) =>
+          item.pricePending === true &&
+          normalize(item.requirementLabel) === normalize(requirement.label)
+      );
+      if (pendingIndex >= 0) {
+        nextQuoteItems[pendingIndex] = {
+          ...nextQuoteItems[pendingIndex],
+          quoteQuantity: nextQuoteItems[pendingIndex].quoteQuantity + 1,
+        };
+      } else {
+        nextQuoteItems.push({
+          _id: idFactory(),
+          isCustom: true,
+          name: requirement.label,
+          price: 0,
+          pricePending: true,
+          quoteQuantity: 1,
+          requirementLabel: requirement.label,
+          source: "quick-service",
+          sourceLabel: service.name,
+        });
+      }
       return;
     }
 

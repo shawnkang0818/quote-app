@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   calculateQuoteTotals,
+  hasPendingPartPrices,
   isValidCustomItem,
   isValidLaborItem,
   normalizeQuoteStatus,
@@ -60,6 +61,21 @@ test("validates one-off custom quote items", () => {
       price: 10,
       quoteQuantity: 1.5,
     }),
+    false
+  );
+});
+
+test("detects unresolved Quick Service part prices", () => {
+  assert.equal(
+    hasPendingPartPrices([
+      { isCustom: true, pricePending: true, name: "Cabin air filter" },
+    ]),
+    true
+  );
+  assert.equal(
+    hasPendingPartPrices([
+      { isCustom: true, pricePending: false, name: "Cabin air filter" },
+    ]),
     false
   );
 });

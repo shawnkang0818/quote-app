@@ -29,6 +29,11 @@ export function generateQuotePDF({
   if (quoteItems.length === 0 && laborItems.length === 0) {
     throw new Error("Add at least one part or labor item.");
   }
+  if (quoteItems.some((item) => item.pricePending)) {
+    throw new Error(
+      "Enter a selling price for every price-required part before generating a PDF."
+    );
+  }
 
   const doc = new jsPDF();
   const company = {

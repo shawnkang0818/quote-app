@@ -17,6 +17,7 @@ import QuickService from "./models/QuickService.js";
 import { DEFAULT_QUICK_SERVICES } from "./data/defaultQuickServices.js";
 import {
   calculateQuoteTotals,
+  hasPendingPartPrices,
   isValidCustomItem,
   isValidLaborItem,
   normalizeQuoteStatus,
@@ -628,6 +629,7 @@ async function buildQuoteSnapshot(payload) {
   const laborItems = Array.isArray(payload.laborItems)
     ? payload.laborItems
     : [];
+  const status = normalizeQuoteStatus(payload.status);
 
   if (items.length === 0 && laborItems.length === 0) {
     const error = new Error("A quote needs at least one part or labor item");
@@ -638,6 +640,14 @@ async function buildQuoteSnapshot(payload) {
   if (!laborItems.every(isValidLaborItem)) {
     const error = new Error(
       "Every labor item needs a description, hours above 0, and a valid hourly rate"
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  if (status === "final" && hasPendingPartPrices(items)) {
+    const error = new Error(
+      "Resolve every price-required part before saving a Final quote"
     );
     error.status = 400;
     throw error;
@@ -659,7 +669,11 @@ async function buildQuoteSnapshot(payload) {
           isCustom: true,
           name: item.name.trim(),
           price: roundCurrency(item.price),
+          pricePending: item.pricePending === true,
           quoteQuantity: Number(item.quoteQuantity),
+          requirementLabel: item.requirementLabel?.trim() || undefined,
+          source: item.source || "manual",
+          sourceLabel: item.sourceLabel?.trim() || undefined,
         };
       }
 
@@ -685,6 +699,7 @@ async function buildQuoteSnapshot(payload) {
         name: part.name,
         price: roundCurrency(part.price),
         quoteQuantity: requestedQuantity,
+        source: "inventory",
       };
     })
   );
@@ -706,7 +721,7 @@ async function buildQuoteSnapshot(payload) {
 
   return {
     quoteNumber: `QT-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`,
-    status: normalizeQuoteStatus(payload.status),
+    status,
     customerName: customer.name,
     customer,
     vehicle,
@@ -879,12 +894,18 @@ app.patch("/api/quotes/:id/status", adminAuth, async (req, res) => {
     if (!["draft", "final"].includes(req.body.status)) {
       return res.status(400).json({ message: "Status must be draft or final" });
     }
-    const quote = await Quote.findByIdAndUpdate(
-      req.params.id,
-      { status: req.body.status },
-      { returnDocument: "after", runValidators: true }
-    );
-    if (!quote) return res.status(404).json({ message: "Quote not found" });
+    const existingQuote = await Quote.findById(req.params.id);
+    if (!existingQuote) return res.status(404).json({ message: "Quote not found" });
+    if (
+      req.body.status === "final" &&
+      hasPendingPartPrices(existingQuote.items)
+    ) {
+      return res.status(400).json({
+        message: "Resolve every price-required part before marking this quote Final",
+      });
+    }
+    existingQuote.status = req.body.status;
+    const quote = await existingQuote.save();
     return res.json(quote);
   } catch (error) {
     return sendDatabaseError(res, error);
@@ -910,7 +931,11 @@ app.post("/api/quotes/:id/duplicate", adminAuth, async (req, res) => {
         isCustom: item.isCustom,
         name: item.name,
         price: item.price,
+        pricePending: item.pricePending,
         quoteQuantity: item.quoteQuantity,
+        requirementLabel: item.requirementLabel,
+        source: item.source,
+        sourceLabel: item.sourceLabel,
       })),
       laborItems: source.laborItems.map((item) => ({
         description: item.description,

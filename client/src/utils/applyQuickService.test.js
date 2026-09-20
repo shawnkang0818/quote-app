@@ -21,7 +21,7 @@ test("adds matching inventory parts and labor", () => {
   assert.deepEqual(result.missingParts, []);
 });
 
-test("reports a missing part but still adds service labor", () => {
+test("adds a price-required placeholder when a service part is missing", () => {
   const result = applyQuickService({
     service,
     parts: [],
@@ -30,7 +30,11 @@ test("reports a missing part but still adds service labor", () => {
     idFactory: () => "labor-1",
   });
 
-  assert.equal(result.quoteItems.length, 0);
+  assert.equal(result.quoteItems.length, 1);
+  assert.equal(result.quoteItems[0].name, "Oil filter");
+  assert.equal(result.quoteItems[0].price, 0);
+  assert.equal(result.quoteItems[0].pricePending, true);
+  assert.equal(result.quoteItems[0].source, "quick-service");
   assert.equal(result.laborItems.length, 1);
   assert.deepEqual(result.missingParts, ["Oil filter"]);
 });
@@ -46,6 +50,7 @@ test("does not exceed available stock", () => {
   });
 
   assert.equal(result.quoteItems[0].quoteQuantity, 1);
+  assert.equal(result.quoteItems[1].pricePending, true);
   assert.deepEqual(result.missingParts, ["Oil filter"]);
 });
 

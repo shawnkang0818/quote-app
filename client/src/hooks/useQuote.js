@@ -71,6 +71,15 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
 
   const updateQuoteStatus = (status) => {
     if (!["draft", "final"].includes(status)) return;
+    if (
+      status === "final" &&
+      quoteItems.some((item) => item.pricePending)
+    ) {
+      setQuoteError(
+        "Enter a selling price for every price-required part before selecting Final."
+      );
+      return;
+    }
     setQuoteStatus(status);
     markDraftChanged();
   };
@@ -131,7 +140,9 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
         isCustom: true,
         name: cleanName,
         price: numericPrice,
+        pricePending: false,
         quoteQuantity: numericQuantity,
+        source: "manual",
       },
     ]);
     setQuoteError("");
@@ -141,6 +152,26 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
 
   const removePart = (id) => {
     setQuoteItems((items) => items.filter((item) => item._id !== id));
+    markDraftChanged();
+  };
+
+  const updateItemPrice = (id, value) => {
+    const numericPrice = Number(value);
+    const hasResolvedPrice =
+      value !== "" && Number.isFinite(numericPrice) && numericPrice > 0;
+
+    setQuoteItems((items) =>
+      items.map((item) =>
+        item._id === id
+          ? {
+              ...item,
+              price: hasResolvedPrice ? numericPrice : 0,
+              pricePending: !hasResolvedPrice,
+            }
+          : item
+      )
+    );
+    setQuoteError("");
     markDraftChanged();
   };
 
@@ -232,9 +263,9 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
       result.missingParts.length > 0
         ? {
             type: "warning",
-            text: `${service.name} labor was added. Missing or unavailable inventory: ${result.missingParts.join(
+            text: `${service.name} was added with price-required parts: ${result.missingParts.join(
               ", "
-            )}.`,
+            )}. Enter each selling price before finalizing.`,
           }
         : {
             type: "success",
@@ -260,6 +291,11 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
   };
 
   const generatePDF = async ({ businessSettings, customer, vehicle }) => {
+    if (quoteItems.some((item) => item.pricePending)) {
+      setQuoteError("Enter a selling price for every price-required part before generating a PDF.");
+      return;
+    }
+
     if (!laborItems.every(isValidLaborItem)) {
       setQuoteError("Every labor item needs hours above 0 and a valid rate.");
       return;
@@ -298,6 +334,16 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
       return;
     }
 
+    if (
+      quoteStatus === "final" &&
+      quoteItems.some((item) => item.pricePending)
+    ) {
+      setQuoteError(
+        "Resolve every price-required part before saving a Final quote. You may save it as Draft instead."
+      );
+      return;
+    }
+
     setIsSaving(true);
     try {
       // The server re-reads inventory, validates custom lines, and calculates
@@ -311,7 +357,11 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
           isCustom: item.isCustom === true,
           name: item.name,
           price: item.price,
+          pricePending: item.pricePending === true,
           quoteQuantity: item.quoteQuantity,
+          requirementLabel: item.requirementLabel,
+          source: item.source,
+          sourceLabel: item.sourceLabel,
         })),
         laborItems: laborItems.map(({ description, hours, hourlyRate }) => ({
           description,
@@ -378,6 +428,7 @@ export function useQuote(parts, taxRate, quoteEdit, initiallyDirty = false) {
     savedQuoteNumber,
     totals,
     updateNote,
+    updateItemPrice,
     updateLabor,
     updateQuoteStatus,
   };
