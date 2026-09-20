@@ -6,6 +6,7 @@ import {
   getSupplierPriceFitmentScore,
   isSupplierPriceVehicleMatch,
   normalizeSupplierPrice,
+  normalizeSupplierPriceImport,
   parseSupplierPricePagination,
   toPublicSupplierSuggestion,
 } from "./supplierPrices.js";
@@ -38,6 +39,30 @@ test("normalizes a supplier offer while dropping unknown fields", () => {
   });
   assert.equal(offer.requiresConfirmation, true);
   assert.equal(Object.hasOwn(offer, "ignored"), false);
+});
+
+test("normalizes a bounded CSV import and enforces its source type", () => {
+  const rows = normalizeSupplierPriceImport([
+    {
+      supplierName: "Metro Supply",
+      supplierPartNumber: "AF-100",
+      partName: "Air Filter",
+      cost: "10.50",
+      sourceType: "api",
+    },
+  ]);
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].cost, 10.5);
+  assert.equal(rows[0].sourceType, "csv");
+});
+
+test("rejects empty and oversized supplier price imports", () => {
+  assert.throws(() => normalizeSupplierPriceImport([]), /at least one/);
+  assert.throws(
+    () => normalizeSupplierPriceImport(Array.from({ length: 501 }, () => ({}))),
+    /cannot exceed 500/
+  );
 });
 
 test("rejects an expiration before the supplier price was retrieved", () => {

@@ -7,6 +7,7 @@ const AVAILABILITY_VALUES = new Set([
 ]);
 const SOURCE_TYPES = new Set(["manual", "csv", "api"]);
 const CURRENCIES = new Set(["USD", "CAD"]);
+export const MAX_SUPPLIER_PRICE_IMPORT_ROWS = 500;
 
 function cleanText(value) {
   return String(value || "").trim();
@@ -94,6 +95,27 @@ export function normalizeSupplierPrice(payload = {}) {
     requiresConfirmation: payload.requiresConfirmation !== false,
     active: payload.active !== false,
   };
+}
+
+// Bulk imports use the same normalization contract as manual entry. Limiting
+// the batch protects the API and makes validation errors practical to review.
+export function normalizeSupplierPriceImport(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) {
+    const error = new Error("Import must contain at least one supplier price");
+    error.status = 400;
+    throw error;
+  }
+  if (rows.length > MAX_SUPPLIER_PRICE_IMPORT_ROWS) {
+    const error = new Error(
+      `Import cannot exceed ${MAX_SUPPLIER_PRICE_IMPORT_ROWS} rows`
+    );
+    error.status = 400;
+    throw error;
+  }
+
+  return rows.map((row) =>
+    normalizeSupplierPrice({ ...row, sourceType: "csv" })
+  );
 }
 
 // Build a bounded filter for the internal search endpoint. Regex terms are

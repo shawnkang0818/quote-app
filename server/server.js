@@ -54,6 +54,7 @@ import {
   getSupplierPriceFitmentScore,
   isSupplierPriceVehicleMatch,
   normalizeSupplierPrice,
+  normalizeSupplierPriceImport,
   parseSupplierPricePagination,
   toPublicSupplierSuggestion,
 } from "./utils/supplierPrices.js";
@@ -78,7 +79,18 @@ const allowedOrigins = (
   .map((origin) => origin.trim());
 
 app.use(cors({ origin: allowedOrigins }));
-app.use(express.json({ limit: "100kb" }));
+const standardJsonParser = express.json({ limit: "100kb" });
+const supplierImportJsonParser = express.json({ limit: "1mb" });
+
+// Regular endpoints retain a small request ceiling. The authenticated CSV
+// importer receives a narrowly scoped allowance for its bounded 500-row batch.
+app.use((req, res, next) => {
+  const parser =
+    req.path === "/api/supplier-prices/import"
+      ? supplierImportJsonParser
+      : standardJsonParser;
+  return parser(req, res, next);
+});
 
 // These baseline headers protect both API responses and error messages without
 // changing the JSON contract consumed by the React client.
@@ -358,6 +370,33 @@ app.post("/api/supplier-prices", adminAuth, async (req, res) => {
   try {
     const saved = await SupplierPrice.create(normalizeSupplierPrice(req.body));
     return res.status(201).json(saved);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// CSV rows are normalized and fully validated before any document is written.
+// This keeps a single bad row from producing a partial, hard-to-audit import.
+app.post("/api/supplier-prices/import", adminAuth, async (req, res) => {
+  try {
+    const rows = normalizeSupplierPriceImport(req.body?.items);
+    const documents = rows.map((row) => new SupplierPrice(row));
+    const errors = documents.flatMap((document, index) => {
+      const validationError = document.validateSync();
+      return validationError
+        ? [{ row: index + 2, message: validationError.message }]
+        : [];
+    });
+
+    if (errors.length > 0) {
+      return res.status(400).json({
+        message: "Import contains invalid supplier prices",
+        errors: errors.slice(0, 25),
+      });
+    }
+
+    const inserted = await SupplierPrice.insertMany(documents, { ordered: true });
+    return res.status(201).json({ imported: inserted.length });
   } catch (error) {
     return sendDatabaseError(res, error);
   }

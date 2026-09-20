@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import AdminAccess from "../components/admin/AdminAccess";
 import SupplierPriceForm from "../components/suppliers/SupplierPriceForm";
 import SupplierPriceTable from "../components/suppliers/SupplierPriceTable";
+import SupplierPriceCsvImport from "../components/suppliers/SupplierPriceCsvImport";
 import {
   getStoredAdminToken,
   loginAdmin,
@@ -11,6 +12,7 @@ import {
 import {
   createSupplierPrice,
   getSupplierPrices,
+  importSupplierPrices,
   updateSupplierPrice,
 } from "../services/supplierPricesService";
 
@@ -34,6 +36,7 @@ function SupplierPricesPage() {
   const [editingPrice, setEditingPrice] = useState(null);
   const [formVersion, setFormVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -141,6 +144,22 @@ function SupplierPricesPage() {
     }
   };
 
+  const handleImport = async (importItems) => {
+    setIsImporting(true);
+    try {
+      const result = await importSupplierPrices(importItems, adminToken);
+      setSuccessMessage(`${result.imported} supplier price(s) imported.`);
+      setErrorMessage("");
+      await loadPrices(1);
+      return true;
+    } catch (error) {
+      setErrorMessage(error.message || "Unable to import supplier prices.");
+      return false;
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const applyFilters = (event) => {
     event.preventDefault();
     setFilters(draftFilters);
@@ -185,6 +204,11 @@ function SupplierPricesPage() {
             editingPrice={editingPrice}
             onCancel={() => setEditingPrice(null)}
             onSave={handleSave}
+          />
+
+          <SupplierPriceCsvImport
+            isImporting={isImporting}
+            onImport={handleImport}
           />
 
           <form onSubmit={applyFilters} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

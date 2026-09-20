@@ -35,6 +35,14 @@ export function updateSupplierPrice(id, payload, adminToken) {
   });
 }
 
+export function importSupplierPrices(items, adminToken) {
+  return apiRequest("/supplier-prices/import", {
+    method: "POST",
+    headers: adminHeaders(adminToken, true),
+    body: JSON.stringify({ items }),
+  });
+}
+
 // This public quote-workspace endpoint intentionally returns no supplier cost
 // or supplier identity; it exposes only customer-facing saved-price options.
 export function getSupplierPriceSuggestions({ search, vehicle = {} }) {
