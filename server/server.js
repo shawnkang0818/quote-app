@@ -14,6 +14,7 @@ import {
 import Quote from "./models/Quote.js";
 import Customer from "./models/Customer.js";
 import QuickService from "./models/QuickService.js";
+import SupplierPrice from "./models/SupplierPrice.js";
 import { DEFAULT_QUICK_SERVICES } from "./data/defaultQuickServices.js";
 import {
   calculateQuoteTotals,
@@ -47,6 +48,11 @@ import {
 import { normalizePart } from "./utils/parts.js";
 import { createRequestRateLimit } from "./middleware/requestRateLimit.js";
 import { createDateRangeFilter } from "./utils/queryFilters.js";
+import {
+  buildSupplierPriceQuery,
+  normalizeSupplierPrice,
+  parseSupplierPricePagination,
+} from "./utils/supplierPrices.js";
 
 dotenv.config();
 
@@ -304,6 +310,88 @@ app.delete("/api/parts/:id", adminAuth, async (req, res) => {
     return res.json({ message: "Part deleted successfully" });
   } catch (err) {
     return sendDatabaseError(res, err);
+  }
+});
+
+// Supplier prices are private commercial data. Every endpoint requires an
+// admin session until employee accounts and supplier-specific permissions are
+// introduced. Search excludes inactive and expired offers by default.
+app.get("/api/supplier-prices", adminAuth, async (req, res) => {
+  try {
+    const query = buildSupplierPriceQuery(req.query);
+    const { page, limit } = parseSupplierPricePagination(req.query);
+    const [items, total] = await Promise.all([
+      SupplierPrice.find(query)
+        .sort({ retrievedAt: -1, supplierName: 1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      SupplierPrice.countDocuments(query),
+    ]);
+
+    return res.json({
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Manual entry, future CSV imports, and approved supplier integrations all
+// use the same normalized write contract.
+app.post("/api/supplier-prices", adminAuth, async (req, res) => {
+  try {
+    const saved = await SupplierPrice.create(normalizeSupplierPrice(req.body));
+    return res.status(201).json(saved);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.get("/api/supplier-prices/:id", adminAuth, async (req, res) => {
+  try {
+    const supplierPrice = await SupplierPrice.findById(req.params.id);
+    if (!supplierPrice) {
+      return res.status(404).json({ message: "Supplier price not found" });
+    }
+    return res.json(supplierPrice);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+app.put("/api/supplier-prices/:id", adminAuth, async (req, res) => {
+  try {
+    const updated = await SupplierPrice.findByIdAndUpdate(
+      req.params.id,
+      normalizeSupplierPrice(req.body),
+      { returnDocument: "after", runValidators: true }
+    );
+    if (!updated) {
+      return res.status(404).json({ message: "Supplier price not found" });
+    }
+    return res.json(updated);
+  } catch (error) {
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Deleting a quote source is intentionally admin-only. In the future an
+// archive action can set active=false when an audit trail is required.
+app.delete("/api/supplier-prices/:id", adminAuth, async (req, res) => {
+  try {
+    const deleted = await SupplierPrice.findByIdAndDelete(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ message: "Supplier price not found" });
+    }
+    return res.status(204).end();
+  } catch (error) {
+    return sendDatabaseError(res, error);
   }
 });
 
