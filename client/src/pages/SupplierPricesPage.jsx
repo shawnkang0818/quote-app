@@ -3,6 +3,7 @@ import AdminAccess from "../components/admin/AdminAccess";
 import SupplierPriceForm from "../components/suppliers/SupplierPriceForm";
 import SupplierPriceTable from "../components/suppliers/SupplierPriceTable";
 import SupplierPriceCsvImport from "../components/suppliers/SupplierPriceCsvImport";
+import SupplierPriceImportHistory from "../components/suppliers/SupplierPriceImportHistory";
 import {
   getStoredAdminToken,
   loginAdmin,
@@ -12,6 +13,7 @@ import {
 import {
   createSupplierPrice,
   getSupplierPrices,
+  getSupplierPriceImports,
   importSupplierPrices,
   previewSupplierPriceImport,
   updateSupplierPrice,
@@ -38,6 +40,13 @@ function SupplierPricesPage() {
   const [formVersion, setFormVersion] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importHistory, setImportHistory] = useState([]);
+  const [importPagination, setImportPagination] = useState({
+    page: 1,
+    pages: 1,
+    total: 0,
+  });
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
@@ -68,13 +77,33 @@ function SupplierPricesPage() {
     [adminToken, filters]
   );
 
+  const loadImportHistory = useCallback(
+    async (page = 1) => {
+      if (!adminToken) return;
+      setIsHistoryLoading(true);
+      try {
+        const data = await getSupplierPriceImports(page, adminToken);
+        setImportHistory(data.items);
+        setImportPagination(data.pagination);
+      } catch (error) {
+        setErrorMessage(error.message || "Unable to load import history.");
+      } finally {
+        setIsHistoryLoading(false);
+      }
+    },
+    [adminToken]
+  );
+
   useEffect(() => {
     if (!adminToken) return;
     let ignore = false;
 
     verifyAdminSession(adminToken)
       .then(() => {
-        if (!ignore) loadPrices(1);
+        if (!ignore) {
+          loadPrices(1);
+          loadImportHistory(1);
+        }
       })
       .catch(() => {
         if (!ignore) {
@@ -86,7 +115,7 @@ function SupplierPricesPage() {
     return () => {
       ignore = true;
     };
-  }, [adminToken, loadPrices]);
+  }, [adminToken, loadImportHistory, loadPrices]);
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -106,6 +135,7 @@ function SupplierPricesPage() {
     sessionStorage.removeItem("adminToken");
     setAdminToken("");
     setItems([]);
+    setImportHistory([]);
     setEditingPrice(null);
     setSuccessMessage("");
   };
@@ -149,15 +179,22 @@ function SupplierPricesPage() {
     return previewSupplierPriceImport(importItems, adminToken);
   };
 
-  const handleImport = async (importItems, strategy) => {
+  const handleImport = async (importItems, strategy, fileName) => {
     setIsImporting(true);
     try {
-      const result = await importSupplierPrices(importItems, strategy, adminToken);
+      const result = await importSupplierPrices(
+        importItems,
+        strategy,
+        fileName,
+        adminToken
+      );
       setSuccessMessage(
-        `${result.imported} added, ${result.updated} updated, ${result.skipped} skipped.`
+        `${result.imported} added, ${result.updated} updated, ${result.skipped} skipped.${
+          result.auditRecorded ? " Import history recorded." : " Prices saved, but the audit record could not be created."
+        }`
       );
       setErrorMessage("");
-      await loadPrices(1);
+      await Promise.all([loadPrices(1), loadImportHistory(1)]);
       return true;
     } catch (error) {
       setErrorMessage(error.message || "Unable to import supplier prices.");
@@ -217,6 +254,13 @@ function SupplierPricesPage() {
             isImporting={isImporting}
             onImport={handleImport}
             onPreview={handleImportPreview}
+          />
+
+          <SupplierPriceImportHistory
+            history={importHistory}
+            isLoading={isHistoryLoading}
+            pagination={importPagination}
+            onPageChange={loadImportHistory}
           />
 
           <form onSubmit={applyFilters} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

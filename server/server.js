@@ -15,6 +15,7 @@ import Quote from "./models/Quote.js";
 import Customer from "./models/Customer.js";
 import QuickService from "./models/QuickService.js";
 import SupplierPrice from "./models/SupplierPrice.js";
+import SupplierPriceImport from "./models/SupplierPriceImport.js";
 import { DEFAULT_QUICK_SERVICES } from "./data/defaultQuickServices.js";
 import {
   calculateQuoteTotals,
@@ -380,12 +381,19 @@ app.post("/api/supplier-prices", adminAuth, async (req, res) => {
 async function prepareSupplierPriceImport(items) {
   const rows = normalizeSupplierPriceImport(items);
   const documents = rows.map((row) => new SupplierPrice(row));
-  const errors = documents.flatMap((document, index) => {
-    const validationError = document.validateSync();
-    return validationError
+  const validationResults = await Promise.all(
+    documents.map((document) =>
+      document.validate().then(
+        () => null,
+        (validationError) => validationError
+      )
+    )
+  );
+  const errors = validationResults.flatMap((validationError, index) =>
+    validationError
       ? [{ row: index + 2, message: validationError.message }]
-      : [];
-  });
+      : []
+  );
   if (errors.length > 0) {
     const error = new Error("Import contains invalid supplier prices");
     error.status = 400;
@@ -428,6 +436,7 @@ app.post("/api/supplier-prices/import", adminAuth, async (req, res) => {
 
     const { rows, matches } = await prepareSupplierPriceImport(req.body?.items);
     const operations = [];
+    const auditRows = [];
     let updated = 0;
     let skipped = 0;
 
@@ -435,6 +444,7 @@ app.post("/api/supplier-prices/import", adminAuth, async (req, res) => {
       const existingId = matches[index].existingId;
       if (existingId && strategy === "skip") {
         skipped += 1;
+        auditRows.push({ row, action: "skipped", index });
       } else if (existingId && strategy === "update") {
         operations.push({
           updateOne: {
@@ -444,23 +454,81 @@ app.post("/api/supplier-prices/import", adminAuth, async (req, res) => {
           },
         });
         updated += 1;
+        auditRows.push({ row, action: "updated", index });
       } else {
         operations.push({ insertOne: { document: row } });
+        auditRows.push({ row, action: "imported", index });
       }
     });
 
     if (operations.length > 0) {
       await SupplierPrice.bulkWrite(operations, { ordered: true });
     }
+    const imported = operations.length - updated;
+    let auditRecorded = true;
+    try {
+      const rawFileName = String(req.body?.fileName || "supplier-prices.csv");
+      const fileName = rawFileName.replace(/[\\/]/g, "_").trim().slice(0, 255);
+      await SupplierPriceImport.create({
+        fileName: fileName || "supplier-prices.csv",
+        strategy,
+        totalRows: rows.length,
+        imported,
+        updated,
+        skipped,
+        rows: auditRows.map(({ row, action, index }) => ({
+          rowNumber: index + 2,
+          supplierName: row.supplierName,
+          supplierPartNumber: row.supplierPartNumber,
+          partName: row.partName,
+          vehicle: row.vehicle,
+          action,
+        })),
+      });
+    } catch (auditError) {
+      // The price operation has already succeeded. Report that accurately and
+      // avoid encouraging a duplicate retry solely because audit storage failed.
+      auditRecorded = false;
+      console.error("Supplier import audit failed:", auditError.message);
+    }
+
     return res.status(201).json({
-      imported: operations.length - updated,
+      imported,
       updated,
       skipped,
+      auditRecorded,
     });
   } catch (error) {
     if (error.details) {
       return res.status(error.status).json({ message: error.message, errors: error.details });
     }
+    return sendDatabaseError(res, error);
+  }
+});
+
+// Import history is private operational metadata and therefore shares the
+// supplier-price administrator boundary.
+app.get("/api/supplier-price-imports", adminAuth, async (req, res) => {
+  try {
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const limit = Math.min(25, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
+    const [items, total] = await Promise.all([
+      SupplierPriceImport.find()
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit),
+      SupplierPriceImport.countDocuments(),
+    ]);
+    return res.json({
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    });
+  } catch (error) {
     return sendDatabaseError(res, error);
   }
 });

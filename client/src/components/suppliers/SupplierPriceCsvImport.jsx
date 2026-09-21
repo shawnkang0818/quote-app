@@ -67,7 +67,8 @@ function SupplierPriceCsvImport({ isImporting, onImport, onPreview }) {
   const confirmImport = async () => {
     const succeeded = await onImport(
       preview.map((row) => row.item),
-      strategy
+      strategy,
+      fileName
     );
     if (succeeded) reset();
   };
