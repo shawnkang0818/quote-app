@@ -118,6 +118,55 @@ export function normalizeSupplierPriceImport(rows) {
   );
 }
 
+// Supplier name, supplier part number, and exact vehicle fitment identify the
+// same commercial offer while allowing one part number to have distinct prices
+// for different vehicles.
+export function getSupplierPriceIdentity(price = {}) {
+  return [
+    price.supplierName,
+    price.supplierPartNumber,
+    price.vehicle?.year,
+    price.vehicle?.make,
+    price.vehicle?.model,
+    price.vehicle?.engine,
+  ]
+    .map((value) => cleanText(value).toLowerCase())
+    .join("|");
+}
+
+export function buildSupplierPriceImportLookup(rows) {
+  return {
+    $or: rows.map((row) => ({
+      supplierName: caseInsensitiveExact(cleanText(row.supplierName)),
+      supplierPartNumber: caseInsensitiveExact(
+        cleanText(row.supplierPartNumber)
+      ),
+    })),
+  };
+}
+
+export function matchSupplierPriceImportRows(rows, existingPrices) {
+  const latestByIdentity = new Map();
+  [...existingPrices]
+    .sort(
+      (left, right) =>
+        new Date(right.retrievedAt || 0) - new Date(left.retrievedAt || 0)
+    )
+    .forEach((price) => {
+      const identity = getSupplierPriceIdentity(price);
+      if (!latestByIdentity.has(identity)) latestByIdentity.set(identity, price);
+    });
+
+  return rows.map((row, index) => {
+    const existing = latestByIdentity.get(getSupplierPriceIdentity(row));
+    return {
+      index,
+      existingId: existing?._id ? String(existing._id) : null,
+      existingRetrievedAt: existing?.retrievedAt || null,
+    };
+  });
+}
+
 // Build a bounded filter for the internal search endpoint. Regex terms are
 // escaped so punctuation in a part number cannot alter the database query.
 export function buildSupplierPriceQuery(params = {}, now = new Date()) {

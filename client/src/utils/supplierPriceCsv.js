@@ -155,9 +155,28 @@ export function parseSupplierPriceCsv(text) {
     throw new Error(`Missing required column(s): ${missingHeaders.join(", ")}`);
   }
 
-  return rows.slice(1).map((values, index) =>
+  const preview = rows.slice(1).map((values, index) =>
     validateAndMapRow(mapRow(headers, values), index + 2)
   );
+  const seenIdentities = new Map();
+  preview.forEach((row) => {
+    const identity = [
+      row.item.supplierName,
+      row.item.supplierPartNumber,
+      row.item.vehicle.year,
+      row.item.vehicle.make,
+      row.item.vehicle.model,
+      row.item.vehicle.engine,
+    ]
+      .map((value) => String(value || "").trim().toLowerCase())
+      .join("|");
+    if (seenIdentities.has(identity)) {
+      row.errors.push(`duplicates CSV row ${seenIdentities.get(identity)}`);
+    } else {
+      seenIdentities.set(identity, row.rowNumber);
+    }
+  });
+  return preview;
 }
 
 export function createSupplierPriceCsvTemplate() {

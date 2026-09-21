@@ -4,7 +4,9 @@ import {
   buildSupplierSuggestionQuery,
   buildSupplierPriceQuery,
   getSupplierPriceFitmentScore,
+  getSupplierPriceIdentity,
   isSupplierPriceVehicleMatch,
+  matchSupplierPriceImportRows,
   normalizeSupplierPrice,
   normalizeSupplierPriceImport,
   parseSupplierPricePagination,
@@ -63,6 +65,29 @@ test("rejects empty and oversized supplier price imports", () => {
     () => normalizeSupplierPriceImport(Array.from({ length: 501 }, () => ({}))),
     /cannot exceed 500/
   );
+});
+
+test("matches an import row to the latest equivalent supplier offer", () => {
+  const row = {
+    supplierName: " Metro Supply ",
+    supplierPartNumber: " AF-100 ",
+    vehicle: { year: "2020", make: "Toyota", model: "Camry", engine: "" },
+  };
+  assert.equal(
+    getSupplierPriceIdentity(row),
+    "metro supply|af-100|2020|toyota|camry|"
+  );
+
+  const [match] = matchSupplierPriceImportRows([row], [
+    { ...row, _id: "older", retrievedAt: "2026-01-01T00:00:00Z" },
+    {
+      ...row,
+      supplierName: "METRO SUPPLY",
+      _id: "latest",
+      retrievedAt: "2026-02-01T00:00:00Z",
+    },
+  ]);
+  assert.equal(match.existingId, "latest");
 });
 
 test("rejects an expiration before the supplier price was retrieved", () => {

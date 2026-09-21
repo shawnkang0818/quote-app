@@ -13,6 +13,7 @@ import {
   createSupplierPrice,
   getSupplierPrices,
   importSupplierPrices,
+  previewSupplierPriceImport,
   updateSupplierPrice,
 } from "../services/supplierPricesService";
 
@@ -144,11 +145,17 @@ function SupplierPricesPage() {
     }
   };
 
-  const handleImport = async (importItems) => {
+  const handleImportPreview = async (importItems) => {
+    return previewSupplierPriceImport(importItems, adminToken);
+  };
+
+  const handleImport = async (importItems, strategy) => {
     setIsImporting(true);
     try {
-      const result = await importSupplierPrices(importItems, adminToken);
-      setSuccessMessage(`${result.imported} supplier price(s) imported.`);
+      const result = await importSupplierPrices(importItems, strategy, adminToken);
+      setSuccessMessage(
+        `${result.imported} added, ${result.updated} updated, ${result.skipped} skipped.`
+      );
       setErrorMessage("");
       await loadPrices(1);
       return true;
@@ -209,6 +216,7 @@ function SupplierPricesPage() {
           <SupplierPriceCsvImport
             isImporting={isImporting}
             onImport={handleImport}
+            onPreview={handleImportPreview}
           />
 
           <form onSubmit={applyFilters} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">

@@ -31,3 +31,14 @@ test("rejects files without required columns", () => {
     /Missing required column/
   );
 });
+
+test("marks repeated supplier and vehicle identities inside one CSV", () => {
+  const csv = [
+    "supplierName,supplierPartNumber,partName,cost,year,make,model",
+    "Metro,AF-1,Air Filter,10,2020,Toyota,Camry",
+    "metro,af-1,Air Filter,11,2020,toyota,CAMRY",
+  ].join("\n");
+  const preview = parseSupplierPriceCsv(csv);
+  assert.equal(preview[0].errors.length, 0);
+  assert.match(preview[1].errors[0], /duplicates CSV row 2/);
+});

@@ -35,11 +35,19 @@ export function updateSupplierPrice(id, payload, adminToken) {
   });
 }
 
-export function importSupplierPrices(items, adminToken) {
-  return apiRequest("/supplier-prices/import", {
+export function previewSupplierPriceImport(items, adminToken) {
+  return apiRequest("/supplier-prices/import/preview", {
     method: "POST",
     headers: adminHeaders(adminToken, true),
     body: JSON.stringify({ items }),
+  });
+}
+
+export function importSupplierPrices(items, strategy, adminToken) {
+  return apiRequest("/supplier-prices/import", {
+    method: "POST",
+    headers: adminHeaders(adminToken, true),
+    body: JSON.stringify({ items, strategy }),
   });
 }
 

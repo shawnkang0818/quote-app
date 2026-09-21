@@ -51,10 +51,12 @@ import { createDateRangeFilter } from "./utils/queryFilters.js";
 import {
   buildSupplierSuggestionQuery,
   buildSupplierPriceQuery,
+  buildSupplierPriceImportLookup,
   getSupplierPriceFitmentScore,
   isSupplierPriceVehicleMatch,
   normalizeSupplierPrice,
   normalizeSupplierPriceImport,
+  matchSupplierPriceImportRows,
   parseSupplierPricePagination,
   toPublicSupplierSuggestion,
 } from "./utils/supplierPrices.js";
@@ -86,7 +88,7 @@ const supplierImportJsonParser = express.json({ limit: "1mb" });
 // importer receives a narrowly scoped allowance for its bounded 500-row batch.
 app.use((req, res, next) => {
   const parser =
-    req.path === "/api/supplier-prices/import"
+    req.path.startsWith("/api/supplier-prices/import")
       ? supplierImportJsonParser
       : standardJsonParser;
   return parser(req, res, next);
@@ -375,29 +377,90 @@ app.post("/api/supplier-prices", adminAuth, async (req, res) => {
   }
 });
 
+async function prepareSupplierPriceImport(items) {
+  const rows = normalizeSupplierPriceImport(items);
+  const documents = rows.map((row) => new SupplierPrice(row));
+  const errors = documents.flatMap((document, index) => {
+    const validationError = document.validateSync();
+    return validationError
+      ? [{ row: index + 2, message: validationError.message }]
+      : [];
+  });
+  if (errors.length > 0) {
+    const error = new Error("Import contains invalid supplier prices");
+    error.status = 400;
+    error.details = errors.slice(0, 25);
+    throw error;
+  }
+
+  const candidates = await SupplierPrice.find(
+    buildSupplierPriceImportLookup(rows)
+  ).select("_id supplierName supplierPartNumber vehicle retrievedAt");
+  return { rows, matches: matchSupplierPriceImportRows(rows, candidates) };
+}
+
+// Preview uses the same fresh database matching as the final import, but never
+// writes data. The final endpoint repeats this check to avoid stale decisions.
+app.post("/api/supplier-prices/import/preview", adminAuth, async (req, res) => {
+  try {
+    const { rows, matches } = await prepareSupplierPriceImport(req.body?.items);
+    return res.json({
+      total: rows.length,
+      existing: matches.filter((match) => match.existingId).length,
+      matches,
+    });
+  } catch (error) {
+    if (error.details) {
+      return res.status(error.status).json({ message: error.message, errors: error.details });
+    }
+    return sendDatabaseError(res, error);
+  }
+});
+
 // CSV rows are normalized and fully validated before any document is written.
 // This keeps a single bad row from producing a partial, hard-to-audit import.
 app.post("/api/supplier-prices/import", adminAuth, async (req, res) => {
   try {
-    const rows = normalizeSupplierPriceImport(req.body?.items);
-    const documents = rows.map((row) => new SupplierPrice(row));
-    const errors = documents.flatMap((document, index) => {
-      const validationError = document.validateSync();
-      return validationError
-        ? [{ row: index + 2, message: validationError.message }]
-        : [];
-    });
-
-    if (errors.length > 0) {
-      return res.status(400).json({
-        message: "Import contains invalid supplier prices",
-        errors: errors.slice(0, 25),
-      });
+    const strategy = String(req.body?.strategy || "append");
+    if (!new Set(["append", "update", "skip"]).has(strategy)) {
+      return res.status(400).json({ message: "Unsupported import strategy" });
     }
 
-    const inserted = await SupplierPrice.insertMany(documents, { ordered: true });
-    return res.status(201).json({ imported: inserted.length });
+    const { rows, matches } = await prepareSupplierPriceImport(req.body?.items);
+    const operations = [];
+    let updated = 0;
+    let skipped = 0;
+
+    rows.forEach((row, index) => {
+      const existingId = matches[index].existingId;
+      if (existingId && strategy === "skip") {
+        skipped += 1;
+      } else if (existingId && strategy === "update") {
+        operations.push({
+          updateOne: {
+            filter: { _id: existingId },
+            update: { $set: row },
+            runValidators: true,
+          },
+        });
+        updated += 1;
+      } else {
+        operations.push({ insertOne: { document: row } });
+      }
+    });
+
+    if (operations.length > 0) {
+      await SupplierPrice.bulkWrite(operations, { ordered: true });
+    }
+    return res.status(201).json({
+      imported: operations.length - updated,
+      updated,
+      skipped,
+    });
   } catch (error) {
+    if (error.details) {
+      return res.status(error.status).json({ message: error.message, errors: error.details });
+    }
     return sendDatabaseError(res, error);
   }
 });
